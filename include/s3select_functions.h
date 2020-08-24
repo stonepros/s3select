@@ -4,6 +4,9 @@
 
 #include "s3select_oper.h"
 #include <boost/algorithm/string.hpp>
+#include <regex>
+#include <algorithm>
+#include <string>
 
 #define BOOST_BIND_ACTION_PARAM( push_name ,param ) boost::bind( &push_name::operator(), g_ ## push_name , _1 ,_2, param)
 namespace s3selectEngine
@@ -48,6 +51,9 @@ enum class s3select_func_En_t {ADD,
                                UPPER,
                                NULLIF,
                                BETWEEN,
+                               IS_NULL,
+                               IN,
+                               LIKE,
                                VERSION
                               };
 
@@ -82,7 +88,10 @@ private:
     {"lower", s3select_func_En_t::LOWER},
     {"upper", s3select_func_En_t::UPPER},
     {"nullif", s3select_func_En_t::NULLIF},
-    {"between", s3select_func_En_t::BETWEEN},
+    {"#between#", s3select_func_En_t::BETWEEN},
+    {"#is_null#", s3select_func_En_t::IS_NULL},
+    {"#in_predicate#", s3select_func_En_t::IN},
+    {"#like_predicate#", s3select_func_En_t::LIKE},
     {"version", s3select_func_En_t::VERSION}
   };
 
@@ -846,6 +855,119 @@ struct _fn_version : public base_function
   }
 };
 
+struct _fn_isnull : public base_function
+{
+
+  value res;
+  
+  bool operator()(bs_stmt_vec_t* args, variable* result)
+  {
+    bs_stmt_vec_t::iterator iter = args->begin();
+    base_statement* expr = *iter;
+    value expr_val = expr->eval();
+    if ( expr_val.is_null()) {
+      result->set_value(int64_t(true));
+    } else {
+      result->set_value(int64_t(false));
+    }
+    return true;
+  }
+};
+
+struct _fn_in : public base_function
+{
+
+  value res;
+  
+  bool operator()(bs_stmt_vec_t* args, variable* result)
+  {
+    bs_stmt_vec_t::iterator iter_begin = args->begin();
+    bs_stmt_vec_t::iterator iter_end = args->end()-1;
+    base_statement* main_expr = *iter_end;
+    value main_expr_val = main_expr->eval();
+    int args_size = args->size();
+    while (args_size > 1)
+    {
+      base_statement* expr = *iter_begin;
+      value expr_val = expr->eval();
+      iter_begin++;
+      if ( expr_val.type == main_expr_val.type) {
+        if ( expr_val == main_expr_val) {
+          result->set_value(int64_t(true));
+          return true;
+        } 
+    } 
+      args_size--;
+    }
+    result->set_value(int64_t(false));
+    return true;
+  }
+};
+
+struct _fn_like : public base_function
+{
+
+  value res;
+
+  std::string transform(std::string s)
+  {
+    bool startswith = (s[0] == '%' && s[s.size()-1] != '%');
+    bool endswith = (s[0] != '%' && s[s.size()-1] == '%');
+    bool startend = (s[0] == '%' && s[s.size()-1] == '%');
+    if (startswith) {
+      if (s[1] == '%') s.erase(s.begin()+1);
+      std::replace(s.begin(), s.begin()+1, '%', '^');
+      s.insert(1, ".");
+      s.insert(2, "*");
+      s.append("$");
+    } else if (endswith) {
+      s.insert(0, "^");
+      std::replace(s.end()-1, s.end(), '%', '$');
+      s.insert(s.size()-1,".");
+      s.insert(s.size()-1,"*");
+    } else if (startend) {
+      std::replace(s.begin(), s.begin()+1, '%', '^');
+      s.insert(1, ".");
+      s.insert(2, "*");
+      std::replace(s.end()-1, s.end(), '%', '$');
+      s.insert(s.size()-1,".");
+      s.insert(s.size()-1,"*");
+    } else {
+      std::string findThis = "%";
+      std::string replaceWith = ".*";
+      s.insert(0,"^");
+      s.append("$");
+      std::size_t pos = 0;
+      while ((pos = s.find(findThis, pos)) != std::string::npos)
+      {
+        s.replace(pos, findThis.length(), replaceWith);
+        pos += replaceWith.length();
+      }
+      std::replace(s.begin(), s.end(), '_', '.');
+    }
+    return s;
+  }
+  
+  bool operator()(bs_stmt_vec_t* args, variable* result)
+  {
+    bs_stmt_vec_t::iterator iter = args->begin();
+    base_statement* expr = *iter;
+    iter++;
+    base_statement* main_expr = *iter;
+    value expr_val = expr->eval();
+    value main_expr_val = main_expr->eval();
+    std::string a = expr_val.to_string();
+    std::string s = transform(a);
+    std::regex x{s};
+    if ( std::regex_match(main_expr_val.to_string(), x)) {
+      result->set_value(int64_t(true));
+    } else {
+      result->set_value(int64_t(false));
+    }
+    return true;
+  }
+};
+
 
 struct _fn_substr : public base_function
 {
@@ -1144,7 +1266,15 @@ base_function* s3select_functions::create(std::string fn_name)
 
   case s3select_func_En_t::BETWEEN:
     return S3SELECT_NEW(this,_fn_between);
-    break; 
+    break;
+
+  case s3select_func_En_t::IS_NULL:
+    return S3SELECT_NEW(this,_fn_isnull);
+    break;
+
+  case s3select_func_En_t::IN:
+    return S3SELECT_NEW(this,_fn_in);
+    break;
 
   case s3select_func_En_t::VERSION:
     return S3SELECT_NEW(this,_fn_version);
@@ -1152,6 +1282,10 @@ base_function* s3select_functions::create(std::string fn_name)
 
   case s3select_func_En_t::NULLIF:
     return S3SELECT_NEW(this,_fn_nullif);
+    break;
+
+  case s3select_func_En_t::LIKE:
+    return S3SELECT_NEW(this,_fn_like);
     break;
 
   default:

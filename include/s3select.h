@@ -861,7 +861,7 @@ void push_between_filter::operator()(s3select* self, const char* a, const char* 
 {
   std::string token(a, b);
 
-  std::string between_function("between");
+  std::string between_function("#between#");
 
   __function* func = S3SELECT_NEW(self, __function, between_function.c_str(), self->getS3F());
 
@@ -895,7 +895,7 @@ void push_in_predicate::operator()(s3select* self, const char* a, const char* b)
   // expr in (e1,e2,e3 ...)
   std::string token(a, b);
 
-  std::string in_function("in_predicate");
+  std::string in_function("#in_predicate#");
 
   __function* func = S3SELECT_NEW(self, __function, in_function.c_str(), self->getS3F());
 
@@ -903,9 +903,9 @@ void push_in_predicate::operator()(s3select* self, const char* a, const char* b)
   {
     base_statement* ei = self->getAction()->exprQ.back();
 
-    func->push_argument(ei);
-
     self->getAction()->exprQ.pop_back();
+
+    func->push_argument(ei);
 
     self->getAction()->in_set_count --;
   }
@@ -919,11 +919,19 @@ void push_like_predicate::operator()(s3select* self, const char* a, const char* 
   // time AST is build, which will improve performance much.
 
   std::string token(a, b);
-  std::string in_function("like_predicate");
+  std::string in_function("#like_predicate#");
 
   __function* func = S3SELECT_NEW(self, __function, in_function.c_str(), self->getS3F());
 
   self->getAction()->in_set_count = 0; //TODO is it correct for all cases.
+
+  base_statement* expr = self->getAction()->exprQ.back();
+  self->getAction()->exprQ.pop_back();
+  func->push_argument(expr);
+
+  base_statement* main_expr = self->getAction()->exprQ.back();
+  self->getAction()->exprQ.pop_back();
+  func->push_argument(main_expr);
 
   self->getAction()->condQ.push_back(func);
 }
@@ -933,7 +941,7 @@ void push_is_null_predicate::operator()(s3select* self, const char* a, const cha
     //expression is null 
     std::string token(a, b);
       
-    std::string in_function("is_null");
+    std::string in_function("#is_null#");
 
   __function* func = S3SELECT_NEW(self, __function, in_function.c_str(), self->getS3F());
 
@@ -944,6 +952,7 @@ void push_is_null_predicate::operator()(s3select* self, const char* a, const cha
   func->push_argument(expr);
 
   self->getAction()->condQ.push_back(func);
+
 }
 
 void push_debug_1::operator()(s3select* self, const char* a, const char* b) const
