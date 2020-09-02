@@ -47,6 +47,8 @@ enum class s3select_func_En_t {ADD,
                                LOWER,
                                UPPER,
                                VERSION,
+                               CASE_WHEN_ELSE,
+                               WHEN_THAN,
                                NULLIF
                               };
 
@@ -81,6 +83,8 @@ private:
     {"lower", s3select_func_En_t::LOWER},
     {"upper", s3select_func_En_t::UPPER},
     {"version", s3select_func_En_t::VERSION},
+    {"#when-than#", s3select_func_En_t::WHEN_THAN},
+    {"#case-when-else#", s3select_func_En_t::CASE_WHEN_ELSE},
     {"nullif", s3select_func_En_t::NULLIF}
   };
 
@@ -1018,6 +1022,60 @@ struct _fn_nullif : public base_function {
       }
     };
 
+struct _fn_when_than : public base_function {
+
+  value when_value,than_value;
+
+  bool operator()(bs_stmt_vec_t* args, variable* result)
+  {
+    bs_stmt_vec_t::iterator iter = args->begin();
+
+    base_statement* than_expr = *iter;
+    iter ++;
+
+    base_statement* when_expr = *iter;
+
+    when_value = when_expr->eval();
+    
+    if (when_value.i64())//true
+    {
+        *result = than_expr->eval();
+        return true;
+    }
+
+    result->set_null();
+
+    return true;
+  }
+};
+
+struct _fn_case_when_else : public base_function {
+
+  value when_than_value;
+
+  bool operator()(bs_stmt_vec_t* args, variable* result)
+  {
+    base_statement* else_expr = *(args->begin());
+
+    size_t args_size = args->size() -1;
+
+    for(int ivec=args_size;ivec>0;ivec--)
+    {
+      when_than_value = (*args)[ivec]->eval();
+      
+      if(!when_than_value.is_null())
+      {
+        *result = when_than_value;
+        return true;
+      }
+
+    }
+
+    *result = else_expr->eval();
+    return true;
+  }
+};
+
 base_function* s3select_functions::create(std::string fn_name)
 {
   const FunctionLibrary::const_iterator iter = m_functions_library.find(fn_name);
@@ -1105,6 +1163,14 @@ base_function* s3select_functions::create(std::string fn_name)
 
   case s3select_func_En_t::NULLIF:
     return S3SELECT_NEW(this,_fn_nullif);
+    break;
+
+  case s3select_func_En_t::WHEN_THAN:
+    return S3SELECT_NEW(this,_fn_when_than);
+    break;
+
+  case s3select_func_En_t::CASE_WHEN_ELSE:
+    return S3SELECT_NEW(this,_fn_case_when_else);
     break;
 
   default:
