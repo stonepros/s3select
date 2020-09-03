@@ -939,6 +939,10 @@ void push_is_null_predicate::operator()(s3select* self, const char* a, const cha
 
   self->getAction()->in_set_count = 0; //TODO is it correct for all cases.
 
+  base_statement* expr = self->getAction()->exprQ.back();
+
+  func->push_argument(expr);
+
   self->getAction()->condQ.push_back(func);
 }
 
