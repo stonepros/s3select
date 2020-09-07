@@ -66,6 +66,7 @@ struct actionQ
   std::vector<base_statement*> exprQ;
   std::vector<base_statement*> funcQ;
   std::vector<base_statement*> condQ;
+  std::vector<base_statement*> whenThenQ;
   projection_alias alias_map;
   std::string from_clause;
   std::vector<std::string> schema_columns;
@@ -439,11 +440,15 @@ public:
       mulldiv_operand = arithmetic_argument | ('(' >> (arithmetic_expression) >> ')') ;
 
       list_of_function_arguments = (arithmetic_expression)[BOOST_BIND_ACTION(push_function_arg)] >> *(',' >> (arithmetic_expression)[BOOST_BIND_ACTION(push_function_arg)]);
+      
       function = ((variable >> '(' )[BOOST_BIND_ACTION(push_function_name)] >> !list_of_function_arguments >> ')')[BOOST_BIND_ACTION(push_function_expr)];
 
-      arithmetic_argument = (float_number)[BOOST_BIND_ACTION(push_float_number)] |  (number)[BOOST_BIND_ACTION(push_number)] | (column_pos)[BOOST_BIND_ACTION(push_column_pos)] |
-                            (string)[BOOST_BIND_ACTION(push_string)] |
-                            (function)[BOOST_BIND_ACTION(push_debug_1)]  | (variable)[BOOST_BIND_ACTION(push_variable)] ;//function is pushed by right-term
+      arithmetic_argument = (float_number)[BOOST_BIND_ACTION(push_float_number)] | 
+                            (number)[BOOST_BIND_ACTION(push_number)] | 
+                            (column_pos)[BOOST_BIND_ACTION(push_column_pos)] |
+                            (string)[BOOST_BIND_ACTION(push_string)] | 
+                            (function) |//function is pushed by right-term
+                            (variable)[BOOST_BIND_ACTION(push_variable)] ;
 
 
       number = bsc::int_p;
@@ -844,7 +849,7 @@ void push_when_than::operator()(s3select* self, const char* a, const char* b) co
  func->push_argument(than_expr);
  func->push_argument(when_expr);
 
- self->getAction()->exprQ.push_back(func);
+ self->getAction()->whenThenQ.push_back(func);
 
  self->getAction()->when_than_count ++;
 }
@@ -862,14 +867,21 @@ void push_case_when_else::operator()(s3select* self, const char* a, const char* 
 
   while(self->getAction()->when_than_count)
   {
-    base_statement* when_then_func = self->getAction()->exprQ.back();
-    self->getAction()->exprQ.pop_back();
+    base_statement* when_then_func = self->getAction()->whenThenQ.back();
+    self->getAction()->whenThenQ.pop_back();
 
     func->push_argument(when_then_func);
 
     self->getAction()->when_than_count--;
   }
 
+// condQ is cleared explicitly, because of "leftover", due to double scanning upon accepting
+// the following rule '(' condition-expression ')' , i.e. (3*3 == 12)
+// Because of the double-scan (bug in spirit?defintion?), a sub-tree for the left side is created, twice.
+// thus, it causes wrong calculation.
+
+  self->getAction()->condQ.clear();
+  
   self->getAction()->exprQ.push_back(func);
 }
 
