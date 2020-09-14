@@ -5,8 +5,6 @@
 #include "s3select_oper.h"
 #include <boost/algorithm/string.hpp>
 #include <regex>
-#include <algorithm>
-#include <string>
 
 #define BOOST_BIND_ACTION_PARAM( push_name ,param ) boost::bind( &push_name::operator(), g_ ## push_name , _1 ,_2, param)
 namespace s3selectEngine
@@ -831,11 +829,11 @@ struct _fn_between : public base_function
 
     if((main_expr_val > first_expr_val) && (main_expr_val < second_expr_val))
     {
-      result->set_value((int64_t)true);
+      result->set_value(true);
     }
     else
     {
-      result->set_value((int64_t)false);
+      result->set_value(false);
     }
 
     return true;
@@ -866,9 +864,9 @@ struct _fn_isnull : public base_function
     base_statement* expr = *iter;
     value expr_val = expr->eval();
     if ( expr_val.is_null()) {
-      result->set_value(int64_t(true));
+      result->set_value(true);
     } else {
-      result->set_value(int64_t(false));
+      result->set_value(false);
     }
     return true;
   }
@@ -891,15 +889,15 @@ struct _fn_in : public base_function
       base_statement* expr = *iter_begin;
       value expr_val = expr->eval();
       iter_begin++;
-      if ( expr_val.type == main_expr_val.type) {
+      if ( (expr_val.type == main_expr_val.type) || (expr_val.is_number() && main_expr_val.is_number())) {
         if ( expr_val == main_expr_val) {
-          result->set_value(int64_t(true));
+          result->set_value(true);
           return true;
         } 
     } 
       args_size--;
     }
-    result->set_value(int64_t(false));
+    result->set_value(false);
     return true;
   }
 };
@@ -908,32 +906,39 @@ struct _fn_like : public base_function
 {
 
   value res;
-
   std::regex compiled_regex;
 
   _fn_like(value s)
   {
     std::string string_value = s.to_string();
-    std::string string_transform = transform(string_value);
-    compiled_regex = std::regex(string_transform);
+    transform(string_value);
+    compiled_regex = std::regex(string_value);
   } 
 
-  std::string transform(std::string s)
+  void transform(std::string& s)
   {
+    std::string::size_type i = 0;
+    while (!s.empty())
+    {
+        i = s.find("%%", i);
+        if (i == std::string::npos) break;
+        s.erase(i, 1);      
+    }
     bool startswith = (s[0] == '%' && s[s.size()-1] != '%');
     bool endswith = (s[0] != '%' && s[s.size()-1] == '%');
     bool startend = (s[0] == '%' && s[s.size()-1] == '%');
     if (startswith) {
-      if (s[1] == '%') s.erase(s.begin()+1);
       std::replace(s.begin(), s.begin()+1, '%', '^');
       s.insert(1, ".");
       s.insert(2, "*");
       s.append("$");
+      std::replace(s.begin(), s.end(), '_', '.');
     } else if (endswith) {
       s.insert(0, "^");
       std::replace(s.end()-1, s.end(), '%', '$');
       s.insert(s.size()-1,".");
       s.insert(s.size()-1,"*");
+      std::replace(s.begin(), s.end(), '_', '.');
     } else if (startend) {
       std::replace(s.begin(), s.begin()+1, '%', '^');
       s.insert(1, ".");
@@ -941,6 +946,7 @@ struct _fn_like : public base_function
       std::replace(s.end()-1, s.end(), '%', '$');
       s.insert(s.size()-1,".");
       s.insert(s.size()-1,"*");
+      std::replace(s.begin(), s.end(), '_', '.');
     } else {
       std::string findThis = "%";
       std::string replaceWith = ".*";
@@ -954,7 +960,6 @@ struct _fn_like : public base_function
       }
       std::replace(s.begin(), s.end(), '_', '.');
     }
-    return s;
   }
   
   bool operator()(bs_stmt_vec_t* args, variable* result)
@@ -963,15 +968,11 @@ struct _fn_like : public base_function
     base_statement* expr = *iter;
     iter++;
     base_statement* main_expr = *iter;
-    value expr_val = expr->eval();
     value main_expr_val = main_expr->eval();
-    std::string a = expr_val.to_string();
-    std::string s = transform(a);
-    std::regex x{s};
-    if ( std::regex_match(main_expr_val.to_string(), x)) {
-      result->set_value(int64_t(true));
+    if ( std::regex_match(main_expr_val.to_string(), compiled_regex)) {
+      result->set_value(true);
     } else {
-      result->set_value(int64_t(false));
+      result->set_value(false);
     }
     return true;
   }
