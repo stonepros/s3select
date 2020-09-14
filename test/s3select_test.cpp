@@ -391,7 +391,7 @@ TEST(TestS3selectFunctions, between)
     s3select s3select_syntax_no_between;
 
     const std::string input_query = "select count(0) from stdin where int(_1) between int(_2) and int(_3) ;";
-    const std::string input_query_no_between = "select count(0) from stdin where int(_1) > int(_2) and int(_1) < int(_3) ;";
+    const std::string input_query_no_between = "select count(0) from stdin where int(_1) >= int(_2) and int(_1) <= int(_3) ;";
 
     auto status = s3select_syntax.parse_query(input_query.c_str());
     ASSERT_EQ(status, 0);
@@ -975,6 +975,26 @@ TEST(TestS3selectFunctions, isnull)
     ASSERT_EQ(s3select_result, std::string("true,\n"));
 } 
 
+TEST(TestS3selectFunctions, isnullnot)
+{
+    s3select s3select_syntax;
+    const std::string input_query = "select \"true\" from stdin where not nullif(1,2) is null;" ;
+    auto status = s3select_syntax.parse_query(input_query.c_str());
+    ASSERT_EQ(status, 0);
+    s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
+    std::string s3select_result;
+    std::string input;
+    size_t size = 1;
+    generate_csv(input, size);
+    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+        false, // dont skip first line 
+        false, // dont skip last line
+        true   // aggregate call
+        ); 
+    ASSERT_EQ(status, 0); 
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
+} 
+
 TEST(TestS3selectFunctions, likeop)
 {
     s3select s3select_syntax;
@@ -998,7 +1018,7 @@ TEST(TestS3selectFunctions, likeop)
 TEST(TestS3selectFunctions, likeopfalse)
 {
     s3select s3select_syntax;
-    const std::string input_query = "select \"true\" from stdin where \"qwertybcde\" like \"%abcde\";" ;
+    const std::string input_query = "select \"true\" from stdin where not  \"qwertybcde\" like \"%abcde\";" ;
     auto status = s3select_syntax.parse_query(input_query.c_str());
     ASSERT_EQ(status, 0);
     s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
@@ -1012,7 +1032,7 @@ TEST(TestS3selectFunctions, likeopfalse)
         true   // aggregate call
         ); 
     ASSERT_EQ(status, 0); 
-    ASSERT_NE(s3select_result, std::string("true,\n"));
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
 } 
 
 TEST(TestS3selectFunctions, likeop1)
@@ -1038,7 +1058,7 @@ TEST(TestS3selectFunctions, likeop1)
 TEST(TestS3selectFunctions, likeop1false)
 {
     s3select s3select_syntax;
-    const std::string input_query = "select \"true\" from stdin where \"qwertyabcdqwerty\" like \"%abcde%\";" ;
+    const std::string input_query = "select \"true\" from stdin where not \"qwertyabcdqwerty\" like \"%abcde%\";" ;
     auto status = s3select_syntax.parse_query(input_query.c_str());
     ASSERT_EQ(status, 0);
     s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
@@ -1052,7 +1072,7 @@ TEST(TestS3selectFunctions, likeop1false)
         true   // aggregate call
         ); 
     ASSERT_EQ(status, 0); 
-    ASSERT_NE(s3select_result, std::string("true,\n"));
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
 } 
 
 TEST(TestS3selectFunctions, likeop2)
@@ -1078,7 +1098,7 @@ TEST(TestS3selectFunctions, likeop2)
 TEST(TestS3selectFunctions, likeop2false)
 {
     s3select s3select_syntax;
-    const std::string input_query = "select \"true\" from stdin where \"abdeqwerty\" like \"abcde%\";" ;
+    const std::string input_query = "select \"true\" from stdin where not  \"abdeqwerty\" like \"abcde%\";" ;
     auto status = s3select_syntax.parse_query(input_query.c_str());
     ASSERT_EQ(status, 0);
     s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
@@ -1092,7 +1112,7 @@ TEST(TestS3selectFunctions, likeop2false)
         true   // aggregate call
         ); 
     ASSERT_EQ(status, 0); 
-    ASSERT_NE(s3select_result, std::string("true,\n"));
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
 } 
 
 TEST(TestS3selectFunctions, likeop6)
@@ -1118,7 +1138,7 @@ TEST(TestS3selectFunctions, likeop6)
 TEST(TestS3selectFunctions, likeop3false)
 {
     s3select s3select_syntax;
-    const std::string input_query = "select \"true\" from stdin where \"aabcde\" like \"_bcde\";" ;
+    const std::string input_query = "select \"true\" from stdin where not \"aabcde\" like \"_bcde\";" ;
     auto status = s3select_syntax.parse_query(input_query.c_str());
     ASSERT_EQ(status, 0);
     s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
@@ -1132,8 +1152,49 @@ TEST(TestS3selectFunctions, likeop3false)
         true   // aggregate call
         ); 
     ASSERT_EQ(status, 0); 
-    ASSERT_NE(s3select_result, std::string("true,\n"));
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
 } 
+
+TEST(TestS3selectFunctions, likeop3mix)
+{
+    s3select s3select_syntax;
+    const std::string input_query = "select \"true\" from stdin where  \"aabbccdef\" like \"_ab%\";" ;
+    auto status = s3select_syntax.parse_query(input_query.c_str());
+    ASSERT_EQ(status, 0);
+    s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
+    std::string s3select_result;
+    std::string input;
+    size_t size = 1;
+    generate_csv(input, size);
+    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+        false, // dont skip first line 
+        false, // dont skip last line
+        true   // aggregate call
+        ); 
+    ASSERT_EQ(status, 0); 
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
+} 
+
+TEST(TestS3selectFunctions, likeop4mix)
+{
+    s3select s3select_syntax;
+    const std::string input_query = "select \"true\" from stdin where \"aabbccdef\" like \"%de_\";" ;
+    auto status = s3select_syntax.parse_query(input_query.c_str());
+    ASSERT_EQ(status, 0);
+    s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
+    std::string s3select_result;
+    std::string input;
+    size_t size = 1;
+    generate_csv(input, size);
+    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+        false, // dont skip first line 
+        false, // dont skip last line
+        true   // aggregate call
+        ); 
+    ASSERT_EQ(status, 0); 
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
+} 
+
 
 TEST(TestS3selectFunctions, likeop4)
 {
@@ -1158,7 +1219,7 @@ TEST(TestS3selectFunctions, likeop4)
 TEST(TestS3selectFunctions, likeop4false)
 {
     s3select s3select_syntax;
-    const std::string input_query = "select \"true\" from stdin where \"abce\" like \"abc_e\";" ;
+    const std::string input_query = "select \"true\" from stdin where not  \"abcccddyddyde\" like \"abc_e\";" ;
     auto status = s3select_syntax.parse_query(input_query.c_str());
     ASSERT_EQ(status, 0);
     s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
@@ -1172,7 +1233,7 @@ TEST(TestS3selectFunctions, likeop4false)
         true   // aggregate call
         ); 
     ASSERT_EQ(status, 0); 
-    ASSERT_NE(s3select_result, std::string("true,\n"));
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
 } 
 
 TEST(TestS3selectFunctions, likeop5)
@@ -1198,7 +1259,7 @@ TEST(TestS3selectFunctions, likeop5)
 TEST(TestS3selectFunctions, likeop5false)
 {
     s3select s3select_syntax;
-    const std::string input_query = "select \"true\" from stdin where \"abcde\" like \"[d-f]bcde\";" ;
+    const std::string input_query = "select \"true\" from stdin where not  \"abcde\" like \"[d-f]bcde\";" ;
     auto status = s3select_syntax.parse_query(input_query.c_str());
     ASSERT_EQ(status, 0);
     s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
@@ -1212,7 +1273,7 @@ TEST(TestS3selectFunctions, likeop5false)
         true   // aggregate call
         ); 
     ASSERT_EQ(status, 0); 
-    ASSERT_NE(s3select_result, std::string("true,\n"));
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
 } 
 
 TEST(TestS3selectFunctions, likeop5not)
@@ -1238,7 +1299,7 @@ TEST(TestS3selectFunctions, likeop5not)
 TEST(TestS3selectFunctions, likeop7)
 {
     s3select s3select_syntax;
-    const std::string input_query = "select \"true\" from stdin where \"qwertyabcde\" like \"%%abcde\";" ;
+    const std::string input_query = "select \"true\" from stdin where \"qwertyabcde\" like \"%%%%abcde\";" ;
     auto status = s3select_syntax.parse_query(input_query.c_str());
     ASSERT_EQ(status, 0);
     s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
@@ -1278,7 +1339,7 @@ TEST(TestS3selectFunctions, likeop8beginning)
 TEST(TestS3selectFunctions, likeop8false)
 {
     s3select s3select_syntax;
-    const std::string input_query = "select \"true\" from stdin where \"dabc\" like \"[abc]%\";" ;
+    const std::string input_query = "select \"true\" from stdin where not \"dabc\" like \"[abc]%\";" ;
     auto status = s3select_syntax.parse_query(input_query.c_str());
     ASSERT_EQ(status, 0);
     s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
@@ -1292,7 +1353,7 @@ TEST(TestS3selectFunctions, likeop8false)
         true   // aggregate call
         ); 
     ASSERT_EQ(status, 0); 
-    ASSERT_NE(s3select_result, std::string("true,\n"));
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
 }
 
 TEST(TestS3selectFunctions, likeop8end)
@@ -1338,7 +1399,7 @@ TEST(TestS3selectFunctions, inoperator)
 TEST(TestS3selectFunctions, inoperatorfalse)
 {
     s3select s3select_syntax;
-    const std::string input_query = "select \"true\" from stdin where \"a\" in (\"b\", \"c\");" ;
+    const std::string input_query = "select \"true\" from stdin where not \"a\" in (\"b\", \"c\");" ;
     auto status = s3select_syntax.parse_query(input_query.c_str());
     ASSERT_EQ(status, 0);
     s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
@@ -1352,10 +1413,68 @@ TEST(TestS3selectFunctions, inoperatorfalse)
         true   // aggregate call
         ); 
     ASSERT_EQ(status, 0); 
-    ASSERT_NE(s3select_result, std::string("true,\n"));
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
 }
 
+TEST(TestS3selectFunctions, inoperatormore)
+{
+    s3select s3select_syntax;
+    const std::string input_query = "select \"true\" from stdin where \"a\" in (\"b\", \"a\", \"d\", \"e\", \"f\");" ;
+    auto status = s3select_syntax.parse_query(input_query.c_str());
+    ASSERT_EQ(status, 0);
+    s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
+    std::string s3select_result;
+    std::string input;
+    size_t size = 1;
+    generate_csv(input, size);
+    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+        false, // dont skip first line 
+        false, // dont skip last line
+        true   // aggregate call
+        ); 
+    ASSERT_EQ(status, 0); 
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
+}
 
+TEST(TestS3selectFunctions, inoperatormixtype)
+{
+    s3select s3select_syntax;
+    const std::string input_query = "select \"true\" from stdin where 10 in (5.0*2.0, 12+1, 9+1.2, 22/2, 12-3);" ;
+    auto status = s3select_syntax.parse_query(input_query.c_str());
+    ASSERT_EQ(status, 0);
+    s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
+    std::string s3select_result;
+    std::string input;
+    size_t size = 1;
+    generate_csv(input, size);
+    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+        false, // dont skip first line 
+        false, // dont skip last line
+        true   // aggregate call
+        ); 
+    ASSERT_EQ(status, 0); 
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
+}
+
+TEST(TestS3selectFunctions, mix)
+{
+    s3select s3select_syntax;
+    const std::string input_query = "select \"true\" from stdin where   \"abcde\" like \"abc_e\" and 10 in (5.0*2.0, 12+1) and nullif(2,2) is null;" ;
+    auto status = s3select_syntax.parse_query(input_query.c_str());
+    ASSERT_EQ(status, 0);
+    s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
+    std::string s3select_result;
+    std::string input;
+    size_t size = 1;
+    generate_csv(input, size);
+    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+        false, // dont skip first line 
+        false, // dont skip last line
+        true   // aggregate call
+        ); 
+    ASSERT_EQ(status, 0); 
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
+}
 
 
 

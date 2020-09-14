@@ -1133,6 +1133,11 @@ public:
     var_value = p;
   }
 
+  void set_value(bool b)
+  {
+  	var_value = b;
+  }
+
   void set_null()
   {
     var_value.setnull();
