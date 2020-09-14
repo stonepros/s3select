@@ -948,16 +948,16 @@ void push_like_predicate::operator()(s3select* self, const char* a, const char* 
 void push_is_null_predicate::operator()(s3select* self, const char* a, const char* b) const
 {
     //expression is null 
-    std::string token(a, b);
+  std::string token(a, b);
       
-    std::string in_function("#is_null#");
+  std::string in_function("#is_null#");
 
   __function* func = S3SELECT_NEW(self, __function, in_function.c_str(), self->getS3F());
 
   self->getAction()->in_set_count = 0; //TODO is it correct for all cases.
 
   base_statement* expr = self->getAction()->exprQ.back();
-
+  self->getAction()->exprQ.pop_back();
   func->push_argument(expr);
 
   self->getAction()->condQ.push_back(func);
