@@ -927,6 +927,15 @@ void push_like_predicate::operator()(s3select* self, const char* a, const char* 
 
   base_statement* expr = self->getAction()->exprQ.back();
   self->getAction()->exprQ.pop_back();
+
+  if (!dynamic_cast<variable*>(expr))
+  {
+    throw base_s3select_exception("like expression must be a constant string", base_s3select_exception::s3select_exp_en_t::FATAL);
+  }else if( dynamic_cast<variable*>(expr)->m_var_type != variable::var_t::COL_VALUE)
+  {
+    throw base_s3select_exception("like expression must be a constant string", base_s3select_exception::s3select_exp_en_t::FATAL);
+  }
+
   func->push_argument(expr);
 
   base_statement* main_expr = self->getAction()->exprQ.back();

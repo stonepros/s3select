@@ -97,7 +97,7 @@ private:
 
 public:
 
-  base_function* create(std::string fn_name);
+  base_function* create(std::string fn_name,bs_stmt_vec_t);
 
   s3select_functions():m_s3select_allocator(0)
   {
@@ -139,7 +139,7 @@ private:
       return;
     }
 
-    base_function* f = m_s3select_functions->create(name);
+    base_function* f = m_s3select_functions->create(name,arguments);
     if (!f)
     {
       throw base_s3select_exception("function not found", base_s3select_exception::s3select_exp_en_t::FATAL);  //should abort query
@@ -909,6 +909,15 @@ struct _fn_like : public base_function
 
   value res;
 
+  std::regex compiled_regex;
+
+  _fn_like(value s)
+  {
+    std::string string_value = s.to_string();
+    std::string string_transform = transform(string_value);
+    compiled_regex = std::regex(string_transform);
+  } 
+
   std::string transform(std::string s)
   {
     bool startswith = (s[0] == '%' && s[s.size()-1] != '%');
@@ -1183,7 +1192,7 @@ struct _fn_nullif : public base_function {
       }
     };
 
-base_function* s3select_functions::create(std::string fn_name)
+base_function* s3select_functions::create(std::string fn_name,bs_stmt_vec_t arguments)
 {
   const FunctionLibrary::const_iterator iter = m_functions_library.find(fn_name);
 
@@ -1284,8 +1293,8 @@ base_function* s3select_functions::create(std::string fn_name)
     return S3SELECT_NEW(this,_fn_nullif);
     break;
 
-  case s3select_func_En_t::LIKE:
-    return S3SELECT_NEW(this,_fn_like);
+  case s3select_func_En_t::LIKE:  
+    return S3SELECT_NEW(this,_fn_like, arguments[0]->eval());
     break;
 
   default:
