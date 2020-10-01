@@ -71,8 +71,11 @@ struct actionQ
   std::vector<std::string> schema_columns;
   s3select_projections  projections;
   uint64_t in_set_count;
+  bool projection_or_predicate_state; //true->projection false->predicate(where-clause statement)
+  std::vector<base_statement*> predicate_columns;
+  std::vector<base_statement*> projections_columns;
 
-  actionQ():in_set_count(0){}
+  actionQ():in_set_count(0),projection_or_predicate_state(true){}
 
 };
 
@@ -233,6 +236,12 @@ struct push_is_null_predicate
   void operator()(s3select* self, const char* a, const char* b) const;
 };
 static push_is_null_predicate g_push_is_null_predicate;
+
+struct push_where_state
+{
+  void operator()(s3select* self, const char* a, const char* b) const;
+};
+static push_where_state g_push_where_state;
 
 struct push_debug_1
 {
@@ -580,6 +589,15 @@ void push_variable::operator()(s3select* self, const char* a, const char* b) con
   }
   
   self->getAction()->exprQ.push_back(v);
+
+  if(self->getAction()->projection_or_predicate_state==false)
+  {
+    self->getAction()->predicate_columns.push_back(v);
+  }
+  else
+  {
+    self->getAction()->projections_columns.push_back(v);
+  }
 }
 
 void push_addsub::operator()(s3select* self, const char* a, const char* b) const
@@ -826,6 +844,15 @@ void push_column_pos::operator()(s3select* self, const char* a, const char* b) c
   }
 
   self->getAction()->exprQ.push_back(v);
+
+  if(self->getAction()->projection_or_predicate_state==false)
+  {
+    self->getAction()->predicate_columns.push_back(v);
+  }
+  else
+  {
+    self->getAction()->projections_columns.push_back(v);
+  }
 }
 
 void push_projection::operator()(s3select* self, const char* a, const char* b) const
@@ -962,6 +989,13 @@ void push_is_null_predicate::operator()(s3select* self, const char* a, const cha
 
   self->getAction()->condQ.push_back(func);
 
+}
+
+void push_where_state::operator()(s3select* self, const char* a, const char* b) const
+{
+  std::string token(a, b);
+
+  self->getAction()->projection_or_predicate_state = false;//parser is now on where-clause 
 }
 
 void push_debug_1::operator()(s3select* self, const char* a, const char* b) const
@@ -1341,6 +1375,146 @@ public:
     return 0;
   }
 };
+
+  class parquet_object : public base_s3object
+  {
+
+  private:
+
+  base_statement* m_where_clause;
+  std::vector<base_statement*> m_projections;
+  bool m_aggr_flow = false; //TODO once per query
+  bool m_is_to_aggregate;
+  std::string m_error_description;
+  s3select* m_s3_select;
+  size_t m_error_count;
+
+  typedef std::vector<uint16_t> column_pos_t;
+
+  void getNextRow();
+
+  void set(s3select* s3_query)//TODO class reader
+  {
+    m_s3_select = s3_query;
+    base_s3object::set(m_s3_select->get_scratch_area());
+
+    m_projections = m_s3_select->get_projections_list();
+    m_where_clause = m_s3_select->get_filter();
+
+    if (m_where_clause)
+    {
+      m_where_clause->traverse_and_apply(m_sa, m_s3_select->get_aliases());
+    }
+
+    for (auto p : m_projections)
+    {
+      p->traverse_and_apply(m_sa, m_s3_select->get_aliases());
+    }
+
+    m_aggr_flow = m_s3_select->is_aggregate_query();
+  }
+
+  void getWhereClauseColumns(column_pos_t &columns_ids)
+  {
+
+  }
+
+  void getProjectionsColumns(column_pos_t &columns_ids)
+  {
+
+  }
+
+  int parquetReader(column_pos_t &cols, std::vector<value> &row_values);
+
+  int getMatchRow( std::string& result) //TODO virtual ? getResult
+  {
+
+    // get all column-references from where-clause 
+    // call parquet-reader(predicate-column-positions ,&row-values)
+    // update scrach area with row-values
+    // run where (if exist) in-case its true --> parquet-reader(projections-column-positions ,&row-values)
+
+
+    column_pos_t where_clause_columns;
+    std::vector<value> row_values;
+
+    getWhereClauseColumns(where_clause_columns);//TODO should call once per query 
+    int status = parquetReader(where_clause_columns,row_values); //TODO status should indicate error/end-of-stream/success
+
+    
+
+    int number_of_tokens = 0;
+
+    if (m_aggr_flow == true)
+    {
+      do
+      {
+
+        number_of_tokens = getNextRow();
+        if (number_of_tokens < 0) //end of stream
+        {
+          if (m_is_to_aggregate)
+            for (auto i : m_projections)
+            {
+              i->set_last_call();
+              result.append( i->eval().to_string() );
+              result.append(",");
+            }
+
+          return number_of_tokens;
+        }
+
+        if ((*m_projections.begin())->is_set_last_call())
+        {
+          //should validate while query execution , no update upon nodes are marked with set_last_call
+          throw base_s3select_exception("on aggregation query , can not stream row data post do-aggregate call", base_s3select_exception::s3select_exp_en_t::FATAL);
+        }
+
+        m_sa->update(m_row_tokens, number_of_tokens);
+        for (auto a : *m_s3_select->get_aliases()->get())
+        {
+          a.second->invalidate_cache_result();
+        }
+
+        if (!m_where_clause || m_where_clause->eval().i64() == true)
+          for (auto i : m_projections)
+          {
+            i->eval();
+          }
+      }
+      while (1);
+    }
+    else
+    {
+      do
+      {
+        number_of_tokens = getNextRow();
+        if (number_of_tokens < 0)
+        {
+          return number_of_tokens;
+        }
+
+        m_sa->update(m_row_tokens, number_of_tokens);
+        for (auto a : *m_s3_select->get_aliases()->get())
+        {
+          a.second->invalidate_cache_result();
+        }
+
+      }
+      while (m_where_clause && m_where_clause->eval().i64() == false);
+
+      for (auto i : m_projections)
+      {
+        result.append( i->eval().to_string() );
+        result.append(",");
+      }
+      result.append("\n");
+    }
+
+    return number_of_tokens; //TODO wrong
+  }
+
+  };
 
 };//namespace
 

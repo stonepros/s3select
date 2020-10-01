@@ -237,7 +237,7 @@ public:
         break;
       }
 
-      m_columns[i++] = s;
+      m_columns[i++] = s;//TODO no need for copy, could use reference to tokens
     }
     m_upper_bound = i;
 
@@ -272,6 +272,12 @@ public:
   {
     return m_upper_bound;
   }
+
+  int update(std::vector<value> &parquet_row_value)
+  {
+    //TODO no need for copy 
+  }
+
 };
 
 class s3select_reserved_word
