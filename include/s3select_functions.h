@@ -965,7 +965,6 @@ struct _fn_like : public base_function
   bool operator()(bs_stmt_vec_t* args, variable* result)
   {
     bs_stmt_vec_t::iterator iter = args->begin();
-    base_statement* expr = *iter;
     iter++;
     base_statement* main_expr = *iter;
     value main_expr_val = main_expr->eval();
