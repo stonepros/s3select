@@ -1237,6 +1237,7 @@ public:
     return 0;
   }
 
+
   int run_s3select_on_stream(std::string& result, const char* csv_stream, size_t stream_length, size_t obj_size)
   {
     int status=0;
@@ -1261,6 +1262,7 @@ public:
     return status;
   }
 
+private:
   int run_s3select_on_stream_internal(std::string& result, const char* csv_stream, size_t stream_length, size_t obj_size)
   {
     //purpose: the cv data is "streaming", it may "cut" rows in the middle, in that case the "broken-line" is stores
@@ -1310,6 +1312,7 @@ public:
     return status;
   }
 
+public:
   int run_s3select_on_object(std::string& result, const char* csv_stream, size_t stream_length, bool skip_first_line, bool skip_last_line, bool do_aggregate)
   {
 
