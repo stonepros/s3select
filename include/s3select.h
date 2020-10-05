@@ -72,8 +72,8 @@ struct actionQ
   s3select_projections  projections;
   uint64_t in_set_count;
   bool projection_or_predicate_state; //true->projection false->predicate(where-clause statement)
-  std::vector<base_statement*> predicate_columns;
-  std::vector<base_statement*> projections_columns;
+  std::vector<base_statement*> predicate_columns; //TODO should be unique
+  std::vector<base_statement*> projections_columns;//TODO should be unique 
 
   actionQ():in_set_count(0),projection_or_predicate_state(true){}
 
@@ -1376,6 +1376,44 @@ public:
   }
 };
 
+//#include "s3select_parquet_parser.h"
+class parquet_reader_intrf
+{
+//integration with Arrow-Parquet
+//purpose: reader for local(FS) parquet file.
+private:
+  std::string parquet_file_name;
+  uint32_t m_num_of_columms;
+  uint64_t m_num_of_rows;
+  uint64_t m_rownum;
+  uint64_t m_chunk_num;
+  std::vector<std::pair<std::string, std::string>> m_schm; //contain column-name,column-type , the order in vector is position.
+
+  int load_meta_data() {return -1;} //column-names,types,order (names <--> seq-id).
+
+public:
+
+
+  typedef std::vector<scratch_area::parquet_value_t> row_values_t;
+  typedef std::vector<uint16_t> positions_t;
+
+  parquet_reader_intrf(std::string name) : parquet_file_name(name), m_num_of_columms(0), m_num_of_rows(0), m_rownum(0), m_chunk_num(0) 
+  { load_meta_data(); }
+
+  int get_column_values_by_positions(positions_t positions, row_values_t &row_values)
+  {return -1;
+  }
+
+  int get_column_values_by_names(std::vector<std::string> column_names, row_values_t &row_values)
+  {return -1;
+  }
+
+  uint16_t get_column_id(std::string column_name)
+  {return -1;
+  }
+
+};
+
   class parquet_object : public base_s3object
   {
 
@@ -1388,12 +1426,16 @@ public:
   std::string m_error_description;
   s3select* m_s3_select;
   size_t m_error_count;
+  parquet_reader_intrf object_reader;
 
   typedef std::vector<uint16_t> column_pos_t;
 
-  void getNextRow();
+  void load_meta_data_into_scratch_area()
+  {
+    //m_s3_select->get_scratch_area()->set_column_pos(column_name.c_str(),column_id); //TODO should load once per query
+  }
 
-  void set(s3select* s3_query)//TODO class reader
+  void set(s3select* s3_query)
   {
     m_s3_select = s3_query;
     base_s3object::set(m_s3_select->get_scratch_area());
@@ -1416,104 +1458,141 @@ public:
 
   void getWhereClauseColumns(column_pos_t &columns_ids)
   {
+    for(auto p : m_s3_select->getAction()->predicate_columns)
+    {
+      //per each (variable*) get its positions and push it into columns_ids
+      if(dynamic_cast<variable*>(p) && p->is_column())
+      {
+        if (dynamic_cast<variable*>(p)->m_var_type == s3selectEngine::variable::var_t::VAR)
+        {
+          std::string column_name = dynamic_cast<variable*>(p)->get_name();
+          uint16_t column_id = object_reader.get_column_id(column_name);
+          columns_ids.push_back(column_id);
+        }
+        else
+        {
+          columns_ids.push_back(dynamic_cast<variable*>(p)->get_column_pos());
+        }
+      }//else exception?
+    }
 
   }
 
   void getProjectionsColumns(column_pos_t &columns_ids)
   {
-
+    for (auto p : m_s3_select->getAction()->projections_columns)
+    {//TODO reuse code bellow
+      //per each p (variable*) get its positions and push it into columns_ids
+      if (dynamic_cast<variable*>(p) && p->is_column())
+      {
+        if (dynamic_cast<variable*>(p)->m_var_type == s3selectEngine::variable::var_t::VAR)
+        {
+          std::string column_name = dynamic_cast<variable *>(p)->get_name();
+          uint16_t column_id = object_reader.get_column_id(column_name);
+          columns_ids.push_back(column_id);
+        }
+        else
+        {
+          columns_ids.push_back(dynamic_cast<variable*>(p)->get_column_pos());
+        }//else exception?
+      }
+    }
   }
 
-  int parquetReader(column_pos_t &cols, std::vector<value> &row_values);
-
-  int getMatchRow( std::string& result) //TODO virtual ? getResult
-  {
-
-    // get all column-references from where-clause 
-    // call parquet-reader(predicate-column-positions ,&row-values)
-    // update scrach area with row-values
-    // run where (if exist) in-case its true --> parquet-reader(projections-column-positions ,&row-values)
-
-
-    column_pos_t where_clause_columns;
-    std::vector<value> row_values;
-
-    getWhereClauseColumns(where_clause_columns);//TODO should call once per query 
-    int status = parquetReader(where_clause_columns,row_values); //TODO status should indicate error/end-of-stream/success
-
-    
-
-    int number_of_tokens = 0;
-
-    if (m_aggr_flow == true)
+    bool is_end_of_stream()
     {
-      do
-      {
+      //TODO parquet scanning reaching end
+      return false;
+    }
 
-        number_of_tokens = getNextRow();
-        if (number_of_tokens < 0) //end of stream
+    int getMatchRow(std::string & result) //TODO virtual ? getResult
+    {
+
+      // get all column-references from where-clause
+      // call parquet-reader(predicate-column-positions ,&row-values)
+      // update scrach area with row-values
+      // run where (if exist) in-case its true --> parquet-reader(projections-column-positions ,&row-values)
+
+      column_pos_t where_clause_columns;
+      std::vector<scratch_area::parquet_value_t> predicate_values;
+
+      column_pos_t projections_columns;
+      std::vector<scratch_area::parquet_value_t> projections_values;
+
+      if (m_aggr_flow == true)
+      {
+        do
         {
-          if (m_is_to_aggregate)
+          if (is_end_of_stream())
+          {
+            if (m_is_to_aggregate)
+              for (auto i : m_projections)
+              {
+                i->set_last_call();
+                result.append(i->eval().to_string());
+                result.append(",");
+              }
+
+            return -1; //TODO negative number is end of stream
+          }
+
+          if ((*m_projections.begin())->is_set_last_call())
+          {
+            //should validate while query execution , no update upon nodes are marked with set_last_call
+            throw base_s3select_exception("on aggregation query , can not stream row data post do-aggregate call", base_s3select_exception::s3select_exp_en_t::FATAL);
+          }
+
+          getWhereClauseColumns(where_clause_columns);                        //TODO should call once per query
+          int status = object_reader.get_column_values_by_positions(where_clause_columns, predicate_values); //TODO status should indicate error/end-of-stream/success
+          m_sa->update(predicate_values, where_clause_columns);               //TODO select _{column-position} ; select {column-name} shoud be sync
+
+          for (auto a : *m_s3_select->get_aliases()->get())
+          {
+            a.second->invalidate_cache_result();
+          }
+
+          if (!m_where_clause || m_where_clause->eval().i64() == true)
+          {
+            getProjectionsColumns(projections_columns);
+            int status = object_reader.get_column_values_by_positions(projections_columns, projections_values);
+            m_sa->update(projections_values, projections_columns);
             for (auto i : m_projections)
             {
-              i->set_last_call();
-              result.append( i->eval().to_string() );
-              result.append(",");
+              i->eval();
             }
-
-          return number_of_tokens;
-        }
-
-        if ((*m_projections.begin())->is_set_last_call())
-        {
-          //should validate while query execution , no update upon nodes are marked with set_last_call
-          throw base_s3select_exception("on aggregation query , can not stream row data post do-aggregate call", base_s3select_exception::s3select_exp_en_t::FATAL);
-        }
-
-        m_sa->update(m_row_tokens, number_of_tokens);
-        for (auto a : *m_s3_select->get_aliases()->get())
-        {
-          a.second->invalidate_cache_result();
-        }
-
-        if (!m_where_clause || m_where_clause->eval().i64() == true)
-          for (auto i : m_projections)
-          {
-            i->eval();
           }
+        } while (1);
       }
-      while (1);
-    }
-    else
-    {
-      do
+      else
       {
-        number_of_tokens = getNextRow();
-        if (number_of_tokens < 0)
+        do
         {
-          return number_of_tokens;
-        }
+          //TODO is-end-of-stream
+          for (auto a : *m_s3_select->get_aliases()->get())
+          {
+            a.second->invalidate_cache_result();
+          }
 
-        m_sa->update(m_row_tokens, number_of_tokens);
-        for (auto a : *m_s3_select->get_aliases()->get())
+          getWhereClauseColumns(where_clause_columns);                        //TODO should call once per query
+          int status = object_reader.get_column_values_by_positions(where_clause_columns, predicate_values); //TODO status should indicate error/end-of-stream/success
+          m_sa->update(predicate_values, where_clause_columns);               //TODO select _{column-position} ; select {column-name} shoud be sync
+
+        } while (m_where_clause && m_where_clause->eval().i64() == false);
+
+        getProjectionsColumns(projections_columns);
+        int status = object_reader.get_column_values_by_positions(projections_columns, projections_values);
+        m_sa->update(projections_values, projections_columns);
+
+        for (auto i : m_projections)
         {
-          a.second->invalidate_cache_result();
+          result.append(i->eval().to_string());
+          result.append(",");
         }
-
+        result.append("\n");
       }
-      while (m_where_clause && m_where_clause->eval().i64() == false);
 
-      for (auto i : m_projections)
-      {
-        result.append( i->eval().to_string() );
-        result.append(",");
-      }
-      result.append("\n");
+      return 1; //1>0
     }
-
-    return number_of_tokens; //TODO wrong
-  }
-
   };
 
 };//namespace
