@@ -1239,6 +1239,30 @@ public:
 
   int run_s3select_on_stream(std::string& result, const char* csv_stream, size_t stream_length, size_t obj_size)
   {
+    int status=0;
+    try{
+        status = run_s3select_on_stream_internal(result,csv_stream,stream_length,obj_size);
+    }
+    catch(base_s3select_exception& e)
+    {
+        m_error_description = e.what();
+        m_error_count ++;
+        if (e.severity() == base_s3select_exception::s3select_exp_en_t::FATAL || m_error_count>100)//abort query execution
+        {
+          return -1;
+        }
+    }
+    catch(chunkalloc_out_of_mem)
+    {
+      m_error_description = "out of memory";
+      return -1;
+    }
+
+    return status;
+  }
+
+  int run_s3select_on_stream_internal(std::string& result, const char* csv_stream, size_t stream_length, size_t obj_size)
+  {
     //purpose: the cv data is "streaming", it may "cut" rows in the middle, in that case the "broken-line" is stores
     //for later, upon next chunk of data is streaming, the stored-line is merge with current broken-line, and processed.
     int status;
