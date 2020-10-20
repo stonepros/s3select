@@ -9,7 +9,7 @@ using namespace BOOST_SPIRIT_CLASSIC_NS;
 
 
 bool is_parquet_file(const char * fn)
-{
+{//diffrentiate between csv and parquet
    const char * ext = "parquet";
 
    if(strstr(fn+strlen(fn)-strlen(ext), ext ))
