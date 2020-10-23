@@ -56,7 +56,7 @@ enum class s3select_func_En_t {ADD,
                                CASE_WHEN_ELSE,
                                WHEN_THAN,
                                COALESCE,
-                               CAST
+                               CAST_TO_STRING
                               };
 
 
@@ -98,7 +98,7 @@ private:
     {"#when-than#", s3select_func_En_t::WHEN_THAN},
     {"#case-when-else#", s3select_func_En_t::CASE_WHEN_ELSE},
     {"coalesce", s3select_func_En_t::COALESCE},
-    {"cast", s3select_func_En_t::CAST}
+    {"cast_to_string", s3select_func_En_t::CAST_TO_STRING}
   };
 
 public:
@@ -1277,7 +1277,7 @@ struct _fn_coalesce : public base_function
   }
 };
 
-struct _fn_cast : public base_function
+struct _fn_cast_to_string : public base_function
 {
 
   value res;
@@ -1288,7 +1288,8 @@ struct _fn_cast : public base_function
 
     base_statement* expr = *iter;
     value expr_val = expr->eval();
-    *result = expr_val;
+    std::string s = expr_val.to_string();
+    result->set_value(s.c_str());
     return true;
   }
 };
@@ -1409,8 +1410,8 @@ base_function* s3select_functions::create(std::string fn_name,bs_stmt_vec_t argu
     return S3SELECT_NEW(this,_fn_case_when_else);
     break;
 
-  case s3select_func_En_t::CAST:
-    return S3SELECT_NEW(this,_fn_cast);
+  case s3select_func_En_t::CAST_TO_STRING:
+    return S3SELECT_NEW(this,_fn_cast_to_string);
     break;
 
   default:
