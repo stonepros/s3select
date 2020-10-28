@@ -1071,7 +1071,7 @@ void push_cast_expr::operator()(s3select* self, const char* a, const char* b) co
     cast_function = "float";
   }else if(cast_operator("string"))//TODO missing cast function string,timestamp,bool(?),decimal(?)
   {
-    cast_function = "cast_to_string";
+    cast_function = "string";
   }else if(cast_operator("timestamp"))
   {
     cast_function = "timestamp";
