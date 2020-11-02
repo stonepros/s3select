@@ -1340,7 +1340,7 @@ private:
   const int column_alias = -2;
 
 public:
-  variable():m_var_type(var_t::NA), _name(""), column_pos(undefined_column_pos) {}
+  variable():m_var_type(var_t::NA), _name(""), column_pos(-1) {}
 
   explicit variable(int64_t i) : m_var_type(var_t::COL_VALUE), column_pos(-1), var_value(i) {}
 
@@ -1363,14 +1363,14 @@ public:
     {
       _name = "#";
       m_var_type = tp;
-      column_pos = undefined_column_pos;
+      column_pos = -1;
       var_value = n.c_str();
     }
     else if (tp ==variable::var_t::STAR_OPERATION)
     {
       _name = "#";
       m_var_type = tp;
-      column_pos = undefined_column_pos;
+      column_pos = -1;
     }
   }
 
