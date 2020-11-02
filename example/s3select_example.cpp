@@ -100,7 +100,17 @@ int main(int argc, char** argv)
 
   if (is_parquet_file(object_name.c_str()))
   {
-    return run_query_on_parquet_file(input_query, object_name.c_str());
+    try {
+      return run_query_on_parquet_file(input_query, object_name.c_str());
+    }
+    catch (base_s3select_exception &e)
+    {
+      std::cout << e.what() << std::endl;
+      if (e.severity() == base_s3select_exception::s3select_exp_en_t::FATAL) //abort query execution
+      {
+        return -1;
+      }
+    }
   }
 
   FILE* fp;
