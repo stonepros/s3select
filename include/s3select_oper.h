@@ -1167,6 +1167,8 @@ public:
   bool is_column_reference() const;
   bool mark_aggreagtion_subtree_to_execute();
 
+  void extract_columns(parquet_file_parser::column_pos_t &cols);
+
   virtual void set_last_call()
   {
     is_last_call = true;
@@ -1222,6 +1224,16 @@ public:
   void dtor()
   {
     this->~base_statement();
+  }
+
+  scratch_area* getScratchArea()
+  {
+    return m_scratch;
+  }
+
+  projection_alias* getAlias()
+  {
+    return m_aliases;
   }
 
 };
