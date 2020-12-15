@@ -504,7 +504,7 @@ struct _fn_to_int : public base_function
       throw base_s3select_exception("characters after int!");
       return false;
     }
-  } 
+  }
     else if (func_arg.type == value::value_En_t::FLOAT)
     {
       i = func_arg.dbl();
@@ -528,7 +528,6 @@ struct _fn_to_float : public base_function
 
   bool operator()(bs_stmt_vec_t* args, variable* result) override
   {
-    char* perr;
     value v = (*args->begin())->eval();
 
     switch (v.type) {
@@ -549,8 +548,8 @@ struct _fn_to_float : public base_function
       }
 
       var_result = d;
-      break;
     }
+    break;
 
     case value::value_En_t::FLOAT:
       var_result = v.dbl();
@@ -647,7 +646,7 @@ struct _fn_to_timestamp : public base_function
 
     bsc::parse_info<> info_dig = bsc::parse(v_str.str(), d_yyyymmdd_dig >> *(separator) >> d_time_dig);
 
-    if(!datetime_validation() or !info_dig.full)
+    if(!datetime_validation() || !info_dig.full)
     {
       throw base_s3select_exception("input date-time is illegal");
     }
