@@ -260,8 +260,8 @@ TEST(TestS3SElect, intnull_compare_operator)
   ASSERT_EQ( d >= c10, false );
   ASSERT_EQ( d < a10, false );
   ASSERT_EQ( d <= b11, false );
-  ASSERT_EQ( d != a10, true );
-  ASSERT_EQ( d != e, true );
+  ASSERT_EQ( d != a10, false );
+  ASSERT_EQ( d != e, false );
   ASSERT_EQ( d == a10, false );
 }
 
@@ -274,8 +274,8 @@ TEST(TestS3SElect, floatnull_compare_operator)
   ASSERT_EQ( d >= c10, false );
   ASSERT_EQ( d < a10, false );
   ASSERT_EQ( d <= b11, false );
-  ASSERT_EQ( d != a10, true );
-  ASSERT_EQ( d != e, true );
+  ASSERT_EQ( d != a10, false );
+  ASSERT_EQ( d != e, false );
   ASSERT_EQ( d == a10, false );
 }
 
@@ -311,16 +311,16 @@ TEST(TestS3SElect, null_arithmetic_operator)
 {
   value a(7), d, e(0);
   d.setnull();
-  ASSERT_EQ((a + d).to_string(), "nan" );
-  ASSERT_EQ((a - d).to_string(), "nan" );
-  ASSERT_EQ((a * d).to_string(), "nan" );
-  ASSERT_EQ((a / d).to_string(), "nan" ); 
-  ASSERT_EQ((a / e).to_string(), "nan" ); 
-  ASSERT_EQ((d + a).to_string(), "nan" );
-  ASSERT_EQ((d - a).to_string(), "nan" );
-  ASSERT_EQ((d * a).to_string(), "nan" );
-  ASSERT_EQ((d / a).to_string(), "nan" ); 
-  ASSERT_EQ((e / a).to_string(), "nan" );
+  ASSERT_EQ((a + d).to_string(), "null" );
+  ASSERT_EQ((a - d).to_string(), "null" );
+  ASSERT_EQ((a * d).to_string(), "null" );
+  ASSERT_EQ((a / d).to_string(), "null" ); 
+  ASSERT_EQ((a / e).to_string(), "null" ); 
+  ASSERT_EQ((d + a).to_string(), "null" );
+  ASSERT_EQ((d - a).to_string(), "null" );
+  ASSERT_EQ((d * a).to_string(), "null" );
+  ASSERT_EQ((d / a).to_string(), "null" ); 
+  ASSERT_EQ((e / a).to_string(), "null" );
 }
 
 TEST(TestS3SElect, nan_arithmetic_operator)
@@ -1046,7 +1046,7 @@ TEST(TestS3selectFunctions, nulladdition)
         true   // aggregate call
         ); 
     ASSERT_EQ(status, 0); 
-    ASSERT_EQ(s3select_result, std::string("nan,\n"));
+    ASSERT_EQ(s3select_result, std::string("null,\n"));
 } 
 
 TEST(TestS3selectFunctions, isnull)
