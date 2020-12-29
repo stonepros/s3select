@@ -183,11 +183,29 @@ public:
     }
   }
 
+  void set_last_call() override
+  {//it cover the use-case where aggregation function is an argument in non-aggregate function.
+    is_last_call = true;
+    for (auto& ba : arguments)
+    {
+      ba->set_last_call();
+    }
+  }
+
+  void set_skip_non_aggregate(bool skip_non_aggregate_op)
+  {//it cover the use-case where aggregation function is an argument in non-aggregate function.
+    m_skip_non_aggregate_op = skip_non_aggregate_op;
+    for (auto& ba : arguments)
+    {
+      ba->set_skip_non_aggregate(m_skip_non_aggregate_op);
+    }
+  }
+
   virtual bool is_aggregate() // TODO under semantic flow
   {
     _resolve_name();
 
-    return m_func_impl->is_aggregate();
+    return m_func_impl->is_aggregate();//TODO use data-member, to be set upon calling resolve_name()
   }
 
   virtual bool semantic()
@@ -203,12 +221,27 @@ public:
     _resolve_name();
 
     if (is_last_call == false)
-    {
-      (*m_func_impl)(&arguments, &m_result);
+    {//all rows prior to last row
+      if(m_skip_non_aggregate_op == false || is_aggregate() == true)
+      {
+        (*m_func_impl)(&arguments, &m_result);
+      }
+      else if(m_skip_non_aggregate_op == true)
+      {
+        for(auto& p : arguments)
+        {//evaluating the arguments (not the function itself, which is a non-aggregate function)
+	 //i.e. in the following use case substring( , sum(),count() ) ; only sum() and count() are evaluated.
+          p->eval();
+        }
+      }
     }
     else
-    {
-      (*m_func_impl).get_aggregate_result(&m_result);
+    {//on the last row, the aggregate function is finalized, 
+     //and non-aggregate function is evaluated with the result of aggregate function.
+      if(is_aggregate())
+        (*m_func_impl).get_aggregate_result(&m_result);
+      else
+        (*m_func_impl)(&arguments, &m_result);
     }
 
     return m_result.get_value();

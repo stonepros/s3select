@@ -919,9 +919,12 @@ protected:
   value m_alias_result;
   base_statement* m_projection_alias;
   int m_eval_stack_depth;
+  bool m_skip_non_aggregate_op;
 
 public:
-  base_statement():m_scratch(nullptr), is_last_call(false), m_is_cache_result(false), m_projection_alias(nullptr), m_eval_stack_depth(0) {}
+  base_statement():m_scratch(nullptr), is_last_call(false), m_is_cache_result(false),
+  m_projection_alias(nullptr), m_eval_stack_depth(0), m_skip_non_aggregate_op(false) {}
+
   virtual value& eval() =0;
   virtual base_statement* left()
   {
@@ -945,6 +948,20 @@ public:
     if (right())
     {
       right()->traverse_and_apply(m_scratch, m_aliases);
+    }
+  }
+
+  virtual void set_skip_non_aggregate(bool skip_non_aggregate_op)
+  {
+    m_skip_non_aggregate_op = skip_non_aggregate_op;
+
+    if (left())
+    {
+      left()->set_skip_non_aggregate(m_skip_non_aggregate_op);
+    }
+    if (right())
+    {
+      right()->set_skip_non_aggregate(m_skip_non_aggregate_op);
     }
   }
 

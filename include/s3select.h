@@ -402,13 +402,18 @@ public:
     if (aggr_flow == true)
       for (const auto& e : get_projections_list())
       {
-        auto skip_expr = e->get_aggregate();
+        auto aggregate_expr = e->get_aggregate();
 
-        if (e->is_binop_aggregate_and_column(skip_expr))
+        if (e->is_binop_aggregate_and_column(aggregate_expr))
         {
           error_description = "illegal expression. /select sum(c1) + c1 ..../ is not allow type of query";
           throw base_s3select_exception(error_description, base_s3select_exception::s3select_exp_en_t::FATAL);
         }
+	//the each column subtree is mark to skip, 
+	//the second code-line marks the aggregation subtree not-to-skip.
+	//for an example: substring( , sum() , count() ) :: the substring is mark to skip execution, while sum and count not.
+        e->set_skip_non_aggregate(true);
+        aggregate_expr->set_skip_non_aggregate(false);
       }
 
     return 0;
