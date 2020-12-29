@@ -213,7 +213,7 @@ public:
     return true;
   }
 
-  __function(const char* fname, s3select_functions* s3f) : name(fname), m_func_impl(0), m_s3select_functions(s3f) {}
+  __function(const char* fname, s3select_functions* s3f) : name(fname), m_func_impl(nullptr), m_s3select_functions(s3f) {}
 
   virtual value& eval()
   {
@@ -1613,35 +1613,6 @@ bool base_statement::is_function()
   }
 }
 
-bool base_statement::is_aggregate_exist_in_expression(base_statement* e) //TODO obsolete ?
-{
-  if (e->is_aggregate())
-  {
-    return true;
-  }
-
-  if (e->left() && e->left()->is_aggregate_exist_in_expression(e->left()))
-  {
-    return true;
-  }
-
-  if (e->right() && e->right()->is_aggregate_exist_in_expression(e->right()))
-  {
-    return true;
-  }
-
-  if (e->is_function())
-  {
-    for (auto i : dynamic_cast<__function*>(e)->get_arguments())
-      if (e->is_aggregate_exist_in_expression(i))
-      {
-        return true;
-      }
-  }
-
-  return false;
-}
-
 base_statement* base_statement::get_aggregate()
 {
   //search for aggregation function in AST
@@ -1676,83 +1647,58 @@ base_statement* base_statement::get_aggregate()
   return 0;
 }
 
-bool base_statement::is_nested_aggregate(base_statement* e)
+bool base_statement::is_column_reference()
 {
-  //validate for non nested calls for aggregation function, i.e. sum ( min ( ))
-  if (e->is_aggregate())
+  if(is_column())
+    return true;
+  
+  if(left() && left()->is_column_reference())
+    return true;
+
+  if(right() && right()->is_column_reference())
+    return true;
+
+  if(is_function())
   {
-    if (e->left())
+    for(auto a : dynamic_cast<__function*>(this)->get_arguments())
     {
-      if (e->left()->is_aggregate_exist_in_expression(e->left()))
-      {
+      if(a->is_column_reference())
         return true;
-      }
     }
-    else if (e->right())
-    {
-      if (e->right()->is_aggregate_exist_in_expression(e->right()))
+  }
+
+  return false;
+}
+
+bool base_statement::is_nested_aggregate(bool &aggr_flow)
+{
+  if (is_aggregate())
+  {
+      aggr_flow=true;
+      for (auto& i : dynamic_cast<__function*>(this)->get_arguments())
       {
-        return true;
-      }
-    }
-    else if (e->is_function())
-    {
-      for (auto i : dynamic_cast<__function*>(e)->get_arguments())
-      {
-        if (i->is_aggregate_exist_in_expression(i))
+        if (i->get_aggregate() != nullptr)
         {
           return true;
         }
       }
-    }
-    return false;
-  }
-  return false;
-}
-
-// select sum(c2) ... + c1 ... is not allowed. a binary operation with scalar is OK. i.e. select sum() + 1
-bool base_statement::is_binop_aggregate_and_column(base_statement* skip_expression)
-{
-  if (left() && left() != skip_expression) //can traverse to left
-  {
-    if (left()->is_column())
-    {
-      return true;
-    }
-    else if (left()->is_binop_aggregate_and_column(skip_expression) == true)
-    {
-      return true;
-    }
   }
 
-  if (right() && right() != skip_expression) //can traverse right
-  {
-    if (right()->is_column())
-    {
-      return true;
-    }
-    else if (right()->is_binop_aggregate_and_column(skip_expression) == true)
-    {
-      return true;
-    }
-  }
+  if(left() && left()->is_nested_aggregate(aggr_flow))
+    return true;
+  
+  if(right() && right()->is_nested_aggregate(aggr_flow))
+    return true;
 
-  if (this != skip_expression && is_function())
+  if (is_function())
   {
-
-    __function* f = (dynamic_cast<__function*>(this));
-    bs_stmt_vec_t l = f->get_arguments();
-    for (auto i : l)
-    {
-      if (i!=skip_expression && i->is_column())
+      for (auto& i : dynamic_cast<__function*>(this)->get_arguments())
       {
-        return true;
+        if (i->get_aggregate() != nullptr)
+        {
+          return i->is_nested_aggregate(aggr_flow);
+        }
       }
-      if (i->is_binop_aggregate_and_column(skip_expression) == true)
-      {
-        return true;
-      }
-    }
   }
 
   return false;

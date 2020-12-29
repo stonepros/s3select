@@ -975,10 +975,9 @@ public:
   }
 
   bool is_function();
-  bool is_aggregate_exist_in_expression(base_statement* e);//TODO obsolete ?
   base_statement* get_aggregate();
-  bool is_nested_aggregate(base_statement* e);
-  bool is_binop_aggregate_and_column(base_statement* skip);
+  bool is_nested_aggregate(bool&);
+  bool is_column_reference();
 
   virtual void set_last_call()
   {

@@ -383,39 +383,41 @@ public:
 
   int semantic()
   {
-    for (const auto& e : get_projections_list())
-    {
-      base_statement* aggr;
-
-      if ((aggr = e->get_aggregate()) != nullptr)
+    for (const auto &e : get_projections_list())
+    {//upon validate there is no aggregation-function nested calls, it validates legit aggregation call. 
+      if (e->is_nested_aggregate(aggr_flow))
       {
-        if (aggr->is_nested_aggregate(aggr))
-        {
-          error_description = "nested aggregation function is illegal i.e. sum(...sum ...)";
-          throw base_s3select_exception(error_description, base_s3select_exception::s3select_exp_en_t::FATAL);
-        }
-
-        aggr_flow = true;
+        error_description = "nested aggregation function is illegal i.e. sum(...sum ...)";
+        throw base_s3select_exception(error_description, base_s3select_exception::s3select_exp_en_t::FATAL);
       }
     }
 
     if (aggr_flow == true)
-      for (const auto& e : get_projections_list())
+    {// atleast one projection column contain aggregation function
+      for (const auto &e : get_projections_list())
       {
         auto aggregate_expr = e->get_aggregate();
 
-        if (e->is_binop_aggregate_and_column(aggregate_expr))
+        if (aggregate_expr)
         {
-          error_description = "illegal expression. /select sum(c1) + c1 ..../ is not allow type of query";
-          throw base_s3select_exception(error_description, base_s3select_exception::s3select_exp_en_t::FATAL);
+          //per each column, subtree is mark to skip,
+          //the second code-line marks the aggregation subtree not-to-skip.
+          //for an example: substring( ... , sum() , count() ) :: the substring is mark to skip execution, while sum and count not.
+          e->set_skip_non_aggregate(true);
+          aggregate_expr->set_skip_non_aggregate(false);
         }
-	//the each column subtree is mark to skip, 
-	//the second code-line marks the aggregation subtree not-to-skip.
-	//for an example: substring( , sum() , count() ) :: the substring is mark to skip execution, while sum and count not.
-        e->set_skip_non_aggregate(true);
-        aggregate_expr->set_skip_non_aggregate(false);
+        else
+        {
+          //in case projection column is not aggregate, the projection column must *not* contain reference to columns.
+          if(e->is_column_reference())
+          {
+            error_description = "illegal expression. /select sum(c1) + c1 ..../ is not allow type of query";
+            throw base_s3select_exception(error_description, base_s3select_exception::s3select_exp_en_t::FATAL);
+          }
+        }
+        
       }
-
+    }
     return 0;
   }
 
