@@ -920,12 +920,37 @@ protected:
   base_statement* m_projection_alias;
   int m_eval_stack_depth;
   bool m_skip_non_aggregate_op;
+  value value_na;
 
 public:
   base_statement():m_scratch(nullptr), is_last_call(false), m_is_cache_result(false),
   m_projection_alias(nullptr), m_eval_stack_depth(0), m_skip_non_aggregate_op(false) {}
 
-  virtual value& eval() =0;
+  virtual value& eval()
+  {
+    //purpose: on aggregation flow to run only the correct subtree(aggregation subtree)
+     
+    if (m_skip_non_aggregate_op == false)
+      return eval_internal();//not skipping this node.
+    else
+    {
+    //skipping this node.
+    //in case execution should skip a node, it will traverse (left and right) 
+    //and search for subtree to execute.   
+    //example: sum( ... ) - sum( ... ) ; the minus operand is skipped while sum() operand is not.
+    if(left())
+      left()->eval_internal();
+    
+    if(right())
+      right()->eval_internal();
+    
+    }
+
+    return value_na;
+  }
+
+  virtual value& eval_internal() = 0;
+  
   virtual base_statement* left()
   {
     return 0;
@@ -978,6 +1003,7 @@ public:
   base_statement* get_aggregate();
   bool is_nested_aggregate(bool&);
   bool is_column_reference();
+  bool mark_aggreagtion_subtree_to_execute();
 
   virtual void set_last_call()
   {
@@ -1211,7 +1237,7 @@ public:
     return var_value;
   }
 
-  virtual value& eval()
+  virtual value& eval_internal()
   {
     if (m_var_type == var_t::COL_VALUE)
     {
@@ -1326,7 +1352,7 @@ public:
     return std::string("#");//TBD
   }
 
-  virtual value& eval()
+  virtual value& eval_internal()
   {
 
     switch (_cmp)
@@ -1425,7 +1451,7 @@ public:
     //return out;
     return std::string("#");//TBD
   }
-  virtual value& eval()
+  virtual value& eval_internal()
   {
     bool res;
     if (!l || !r)
@@ -1503,7 +1529,7 @@ public:
     return std::string("#");//TBD
   }
 
-  virtual value& eval()
+  virtual value& eval_internal()
   {
     switch (_mulldiv)
     {
@@ -1579,7 +1605,7 @@ public:
     return std::string("#");//TBD
   }
 
-  virtual value& eval()
+  virtual value& eval_internal()
   {
     if (_op == addsub_op_t::NA) // -num , +num , unary-operation on number
     {
@@ -1633,7 +1659,7 @@ class negate_function_operation : public base_statement
     return function_to_negate;
   }
 
-  virtual value& eval()
+  virtual value& eval_internal()
   {
     res = function_to_negate->eval();
 

@@ -217,6 +217,11 @@ public:
 
   virtual value& eval()
   {
+    return eval_internal();
+  }
+
+  virtual value& eval_internal()
+  {
 
     _resolve_name();
 
@@ -1702,6 +1707,29 @@ bool base_statement::is_nested_aggregate(bool &aggr_flow)
   }
 
   return false;
+}
+
+bool base_statement::mark_aggreagtion_subtree_to_execute()
+{//purpase:: set aggregation subtree as runnable.
+ //the function search for aggregation function, and mark its subtree {skip = false}
+  if (is_aggregate())
+    set_skip_non_aggregate(false);
+  
+  if (left())
+    left()->mark_aggreagtion_subtree_to_execute();
+  
+  if(right())
+    right()->mark_aggreagtion_subtree_to_execute();
+
+  if (is_function())
+  {
+      for (auto& i : dynamic_cast<__function*>(this)->get_arguments())
+      {
+          i->mark_aggreagtion_subtree_to_execute();
+      }
+  }
+
+  return true;
 }
 
 } //namespace s3selectEngine

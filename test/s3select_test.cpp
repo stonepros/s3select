@@ -2352,7 +2352,7 @@ TEST(TestS3selectFunctions, nested_call_aggregate_with_non_aggregate)
     //purpose: test projections with aggregation functions, in mix of nested calls. 
     s3select s3select_syntax;
 
-    const std::string input_query = "select substring('abcdefghijklm',(2-1)*3+sum(cast(_1 as int))*0+1,2*count(0)/count(0)) ,count(0),sum(cast(_1 as int))*0 from stdin;";
+    const std::string input_query = "select substring('abcdefghijklm',(2-1)*3+sum(cast(_1 as int))*0+1,(count() + count(0))/count(0)) ,count(0),(sum(cast(_1 as int))*min(cast(_2 as int)))*0 from stdin;";
 
     auto status = s3select_syntax.parse_query(input_query.c_str());
     ASSERT_EQ(status, 0);
