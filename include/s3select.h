@@ -30,19 +30,6 @@ private:
   std::vector<base_statement*> m_projections;
 
 public:
-  bool is_aggregate()
-  {
-    //TODO iterate on projections , and search for aggregate
-    //for(auto p : m_projections){}
-
-    return false;
-  }
-
-  bool semantic()
-  {
-    //TODO check aggragtion function are not nested
-    return false;
-  }
 
   std::vector<base_statement*>* get()
   {
@@ -71,7 +58,6 @@ struct actionQ
   std::vector<std::string> trimTypeQ;
   projection_alias alias_map;
   std::string from_clause;
-  std::vector<std::string> schema_columns;
   s3select_projections  projections;
 
   uint64_t in_set_count;
@@ -80,7 +66,7 @@ struct actionQ
 
   actionQ():in_set_count(0), when_than_count(0){}
 
-  std::map<void*,std::vector<char*> *> x_map;
+  std::map<const void*,std::vector<const char*> *> x_map;
 
   ~actionQ()
   {
@@ -88,20 +74,20 @@ struct actionQ
       delete m.second;
   }
   
-  bool is_already_scanned(void *th,char *a)
+  bool is_already_scanned(const void *th,const char *a)
   {
     //purpose: caller get indication in the case a specific builder is scan more than once the same text(pointer)
     auto t = x_map.find(th);
 
     if(t == x_map.end())
     {
-      auto v = new std::vector<char*>;//TODO delete 
-      x_map.insert(std::pair<void*,std::vector<char*> *>(th,v));
+      auto v = new std::vector<const char*>;//TODO delete 
+      x_map.insert(std::pair<const void*,std::vector<const char*> *>(th,v));
       v->push_back(a);
     }
     else
     {
-      for( auto c : *(t->second) )
+      for(auto& c : *(t->second))
       {
         if( strcmp(c,a) == 0)
           return true;
@@ -384,7 +370,9 @@ public:
   int semantic()
   {
     for (const auto &e : get_projections_list())
-    {//upon validate there is no aggregation-function nested calls, it validates legit aggregation call. 
+    {
+      e->resolve_node();
+      //upon validate there is no aggregation-function nested calls, it validates legit aggregation call. 
       if (e->is_nested_aggregate(aggr_flow))
       {
         error_description = "nested aggregation function is illegal i.e. sum(...sum ...)";
@@ -410,7 +398,7 @@ public:
           //in case projection column is not aggregate, the projection column must *not* contain reference to columns.
           if(e->is_column_reference())
           {
-            error_description = "illegal expression. /select sum(c1) + c1 ..../ is not allow type of query";
+            error_description = "illegal query; projection contains aggregation function is not allowed with projection contains column reference";
             throw base_s3select_exception(error_description, base_s3select_exception::s3select_exp_en_t::FATAL);
           }
         }
@@ -1453,7 +1441,7 @@ public:
       m_where_clause->traverse_and_apply(m_sa, m_s3_select->get_aliases());
     }
 
-    for (auto p : m_projections)
+    for (auto& p : m_projections)
     {
       p->traverse_and_apply(m_sa, m_s3_select->get_aliases());
     }
