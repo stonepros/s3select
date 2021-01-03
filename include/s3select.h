@@ -903,10 +903,29 @@ void push_logical_predicate::builder(s3select* self, const char* a, const char* 
     tr = self->getAction()->condQ.back();
     self->getAction()->condQ.pop_back();
   }
+  else if(self->getAction()->exprQ.empty() == false)
+  {
+    tr = self->getAction()->exprQ.back();
+    self->getAction()->exprQ.pop_back();
+  }  
+  else 
+  {//should reject by syntax parser
+    throw base_s3select_exception(std::string("missing right operand for logical expression"), base_s3select_exception::s3select_exp_en_t::FATAL);
+  }
+
   if (self->getAction()->condQ.empty() == false)
   {
     tl = self->getAction()->condQ.back();
     self->getAction()->condQ.pop_back();
+  }
+  else if(self->getAction()->exprQ.empty() == false)
+  {
+    tl = self->getAction()->exprQ.back();
+    self->getAction()->exprQ.pop_back();
+  } 
+  else 
+  {//should reject by syntax parser
+    throw base_s3select_exception(std::string("missing left operand for logical expression"), base_s3select_exception::s3select_exp_en_t::FATAL);
   }
 
   logical_operand* f = S3SELECT_NEW(self, logical_operand, tl, oplog, tr);

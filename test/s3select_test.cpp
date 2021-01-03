@@ -121,7 +121,7 @@ public:
 };
 
 std::string run_s3select(std::string expression)
-{
+{//purpose: run query on single row and return result(single projections).
   s3select s3select_syntax;
 
   s3select_syntax.parse_query(expression.c_str());
@@ -133,6 +133,20 @@ std::string run_s3select(std::string expression)
   s3_csv_object.run_s3select_on_object(s3select_result, in.c_str(), in.size(), false, false, true);
 
   s3select_result = s3select_result.substr(0, s3select_result.find_first_of(","));
+
+  return s3select_result;
+}
+
+std::string run_s3select(std::string expression,std::string input)
+{//purpose: run query on multiple rows and return result(multiple projections).
+  s3select s3select_syntax;
+
+  s3select_syntax.parse_query(expression.c_str());
+
+  std::string s3select_result;
+  s3selectEngine::csv_object  s3_csv_object(&s3select_syntax);
+
+  s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), false, false, true);
 
   return s3select_result;
 }
@@ -353,6 +367,14 @@ TEST(TestS3selectFunctions, add)
     ASSERT_EQ(s3select_res, std::string("-4.5"));
 }
 
+void generate_fix_columns_csv(std::string& out, size_t size) {
+  std::stringstream ss;
+  for (auto i = 0U; i < size; ++i) {
+    ss << 1 << "," << 2 << "," << 3 << "," << 4 << "," << 5 << std::endl;
+  }
+  out = ss.str();
+}
+
 void generate_rand_csv(std::string& out, size_t size) {
   // schema is: int, float, string, string
   std::stringstream ss;
@@ -367,6 +389,16 @@ void generate_csv(std::string& out, size_t size) {
   std::stringstream ss;
   for (auto i = 0U; i < size; ++i) {
     ss << i << "," << i/10.0 << "," << "foo"+std::to_string(i) << "," << std::to_string(i)+"bar" << std::endl;
+  }
+  out = ss.str();
+}
+
+void generate_rand_columns_csv(std::string& out, size_t size) {
+  std::stringstream ss;
+  auto r = [](){return rand()%1000;};
+
+  for (auto i = 0U; i < size; ++i) {
+    ss << r() << "," << r() << "," << r() << "," << r() << "," << r() << "," << r() << "," << r() << "," << r() << "," << r() << "," << r() << std::endl;
   }
   out = ss.str();
 }
@@ -2346,33 +2378,34 @@ TEST(TestS3selectFunctions, trim11)
     ASSERT_EQ(s3select_result, std::string("foobar,\n"));
 }
 
-
-TEST(TestS3selectFunctions, nested_call_aggregate_with_non_aggregate)
+TEST(TestS3selectFunctions, nested_call_aggregate_with_non_aggregate )
 {
-    //purpose: test projections with aggregation functions, in mix of nested calls. 
-    s3select s3select_syntax;
+  std::string input;
+  size_t size = 128;
 
-    const std::string input_query = "select substring('abcdefghijklm',(2-1)*3+sum(cast(_1 as int))*0+1,(count() + count(0))/count(0)) ,count(0),(sum(cast(_1 as int))*min(cast(_2 as int)))*0 from stdin;";
+  generate_fix_columns_csv(input, size);
 
-    auto status = s3select_syntax.parse_query(input_query.c_str());
-    ASSERT_EQ(status, 0);
+  const std::string input_query = "select sum(cast(_1 as int)),max(cast(_3 as int)),substring('abcdefghijklm',(2-1)*3+sum(cast(_1 as int))/sum(cast(_1 as int))+1,(count() + count(0))/count(0)) from stdin;";
 
-    s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
+  std::string s3select_result = run_s3select(input_query,input);
 
-    std::string s3select_result;
-    std::string input;
-    size_t size = 128;
-    generate_rand_csv(input, size);
-
-    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
-        false, // dont skip first line 
-        false, // dont skip last line
-        true   // aggregate call
-        ); 
-
-    ASSERT_EQ(status, 0);
-    ASSERT_EQ(s3select_result, "de,128,0,");
+  ASSERT_EQ(s3select_result,"128,3,ef,");
 }
 
+TEST(TestS3selectFunctions, cast_1 )
+{
+  std::string input;
+  size_t size = 10000;
+  generate_rand_columns_csv(input, size);
+  const std::string input_query = "select count(*) from s3object where cast(_3 as int)>99 and cast(_3 as int)<1000;";
+
+  std::string s3select_result = run_s3select(input_query,input);
+
+  const std::string input_query_2 = "select count(*) from s3object where char_length(_3)==3;";
+
+  std::string s3select_result_2 = run_s3select(input_query_2,input);
+
+  ASSERT_EQ(s3select_result,s3select_result_2);
+}
 
 
