@@ -2014,7 +2014,7 @@ TEST(TestS3selectFunctions, caststring1)
         false, // dont skip last line
         true   // aggregate call
         ); 
-    ASSERT_EQ(status, 0); 
+    ASSERT_EQ(status, -1); 
     ASSERT_EQ(s3select_result, "");
 } 
 
