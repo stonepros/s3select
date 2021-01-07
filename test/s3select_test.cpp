@@ -120,11 +120,16 @@ public:
   }
 };
 
+const std::string failure_sign("#failure#");
+
 std::string run_s3select(std::string expression)
 {//purpose: run query on single row and return result(single projections).
   s3select s3select_syntax;
 
-  s3select_syntax.parse_query(expression.c_str());
+  int status = s3select_syntax.parse_query(expression.c_str());
+
+  if(status)
+    return failure_sign;
 
   std::string s3select_result;
   s3selectEngine::csv_object  s3_csv_object(&s3select_syntax);
@@ -141,7 +146,10 @@ std::string run_s3select(std::string expression,std::string input)
 {//purpose: run query on multiple rows and return result(multiple projections).
   s3select s3select_syntax;
 
-  s3select_syntax.parse_query(expression.c_str());
+  int status = s3select_syntax.parse_query(expression.c_str());
+
+  if(status)
+    return failure_sign;
 
   std::string s3select_result;
   s3selectEngine::csv_object  s3_csv_object(&s3select_syntax);
@@ -403,6 +411,16 @@ void generate_rand_columns_csv(std::string& out, size_t size) {
   out = ss.str();
 }
 
+void generate_rand_columns_csv_with_null(std::string& out, size_t size) {
+  std::stringstream ss;
+  auto r = [](){ int x=rand()%1000;if (x<100) return std::string(""); else return std::to_string(x);};
+
+  for (auto i = 0U; i < size; ++i) {
+    ss << r() << "," << r() << "," << r() << "," << r() << "," << r() << "," << r() << "," << r() << "," << r() << "," << r() << "," << r() << std::endl;
+  }
+  out = ss.str();
+}
+
 TEST(TestS3selectFunctions, sum)
 {
     s3select s3select_syntax;
@@ -647,8 +665,8 @@ TEST(TestS3SElect, from_invalid_object)
     const std::string input_query = "select sum(1) from file.txt;";
     auto status = s3select_syntax.parse_query(input_query.c_str());
     ASSERT_EQ(status, -1);
-	  auto s3select_res = run_s3select(input_query);
-    ASSERT_EQ(s3select_res, "");
+    auto s3select_res = run_s3select(input_query);
+    ASSERT_EQ(s3select_res,failure_sign);
 }
 
 TEST(TestS3selectFunctions, avg)
@@ -2409,4 +2427,24 @@ TEST(TestS3selectFunctions, cast_1 )
   ASSERT_EQ(s3select_result,s3select_result_2);
 }
 
+TEST(TestS3selectFunctions, null_column )
+{
+  std::string input;
+  size_t size = 10000;
 
+  generate_rand_columns_csv_with_null(input, size);
+
+  const std::string input_query = "select count(*) from s3object where _3 is null;";
+
+  std::string s3select_result = run_s3select(input_query,input);
+
+  ASSERT_NE(s3select_result,failure_sign);
+
+  const std::string input_query_2 = "select count(*) from s3object where nullif(_3,null) is null;";
+
+  std::string s3select_result_2 = run_s3select(input_query_2,input);
+
+  ASSERT_NE(s3select_result_2,failure_sign);
+
+  ASSERT_EQ(s3select_result,s3select_result_2);
+}

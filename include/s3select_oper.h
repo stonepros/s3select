@@ -1298,6 +1298,9 @@ public:
     else
     {
       var_value = (char*)m_scratch->get_column_value(column_pos).data();  //no allocation. returning pointer of allocated space
+      //in the case of successive column-delimiter {1,some_data,,3}=> third column is NULL 
+      if (*var_value.str()== 0)
+          var_value.setnull();
     }
 
     return var_value;
