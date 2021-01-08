@@ -251,34 +251,6 @@ TEST(TestS3SElect, arithmetic_operator)
   ASSERT_EQ( ( (a+b) * (c+d) ).i64(), 21 );
 }
 
-TEST(TestS3SElect, intnull_compare_operator)
-{
-  value a10(10), b11(11), c10(10), d, e;
-  d.setnull();
-  e.setnull();
-  ASSERT_EQ( d > b11, false );
-  ASSERT_EQ( d >= c10, false );
-  ASSERT_EQ( d < a10, false );
-  ASSERT_EQ( d <= b11, false );
-  ASSERT_EQ( d != a10, false );
-  ASSERT_EQ( d != e, false );
-  ASSERT_EQ( d == a10, false );
-}
-
-TEST(TestS3SElect, floatnull_compare_operator)
-{
-  value a10(10.1), b11(11.2), c10(10.1), d, e;
-  d.setnull();
-  e.setnull();
-  ASSERT_EQ( d > b11, false );
-  ASSERT_EQ( d >= c10, false );
-  ASSERT_EQ( d < a10, false );
-  ASSERT_EQ( d <= b11, false );
-  ASSERT_EQ( d != a10, false );
-  ASSERT_EQ( d != e, false );
-  ASSERT_EQ( d == a10, false );
-}
-
 TEST(TestS3SElect, intnan_compare_operator)
 {
   value a10(10), b11(11), c10(10), d, e;
@@ -1087,7 +1059,267 @@ TEST(TestS3selectFunctions, isnullnot)
         ); 
     ASSERT_EQ(status, 0); 
     ASSERT_EQ(s3select_result, std::string("true,\n"));
+}
+
+TEST(TestS3selectFunctions, isnull1)
+{
+    s3select s3select_syntax;
+    const std::string input_query = "select \"true\" from stdin where 7 + null is null;" ;
+    auto status = s3select_syntax.parse_query(input_query.c_str());
+    ASSERT_EQ(status, 0);
+    s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
+    std::string s3select_result;
+    std::string input;
+    size_t size = 1;
+    generate_csv(input, size);
+    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+        false, // dont skip first line 
+        false, // dont skip last line
+        true   // aggregate call
+        ); 
+    ASSERT_EQ(status, 0); 
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
 } 
+
+TEST(TestS3selectFunctions, isnull2)
+{
+    s3select s3select_syntax;
+    const std::string input_query = "select \"true\" from stdin where null + 7 is null;" ;
+    auto status = s3select_syntax.parse_query(input_query.c_str());
+    ASSERT_EQ(status, 0);
+    s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
+    std::string s3select_result;
+    std::string input;
+    size_t size = 1;
+    generate_csv(input, size);
+    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+        false, // dont skip first line 
+        false, // dont skip last line
+        true   // aggregate call
+        ); 
+    ASSERT_EQ(status, 0); 
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
+} 
+
+TEST(TestS3selectFunctions, isnull3)
+{
+    s3select s3select_syntax;
+    const std::string input_query = "select \"true\" from stdin where (null > 1) is null;" ;
+    auto status = s3select_syntax.parse_query(input_query.c_str());
+    ASSERT_EQ(status, 0);
+    s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
+    std::string s3select_result;
+    std::string input;
+    size_t size = 1;
+    generate_csv(input, size);
+    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+        false, // dont skip first line 
+        false, // dont skip last line
+        true   // aggregate call
+        ); 
+    ASSERT_EQ(status, 0); 
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
+} 
+
+TEST(TestS3selectFunctions, isnull4)
+{
+    s3select s3select_syntax;
+    const std::string input_query = "select \"true\" from stdin where (1 <= null) is null;" ;
+    auto status = s3select_syntax.parse_query(input_query.c_str());
+    ASSERT_EQ(status, 0);
+    s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
+    std::string s3select_result;
+    std::string input;
+    size_t size = 1;
+    generate_csv(input, size);
+    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+        false, // dont skip first line 
+        false, // dont skip last line
+        true   // aggregate call
+        ); 
+    ASSERT_EQ(status, 0); 
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
+} 
+
+TEST(TestS3selectFunctions, isnull5)
+{
+    s3select s3select_syntax;
+    const std::string input_query = "select \"true\" from stdin where (null > 2 and 1 == 0) is not null;" ;
+    auto status = s3select_syntax.parse_query(input_query.c_str());
+    ASSERT_EQ(status, 0);
+    s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
+    std::string s3select_result;
+    std::string input;
+    size_t size = 1;
+    generate_csv(input, size);
+    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+        false, // dont skip first line 
+        false, // dont skip last line
+        true   // aggregate call
+        ); 
+    ASSERT_EQ(status, 0); 
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
+} 
+
+TEST(TestS3selectFunctions, isnull6)
+{
+    s3select s3select_syntax;
+    const std::string input_query = "select \"true\" from stdin where (null>2 and 2>1) is  null;" ;
+    auto status = s3select_syntax.parse_query(input_query.c_str());
+    ASSERT_EQ(status, 0);
+    s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
+    std::string s3select_result;
+    std::string input;
+    size_t size = 1;
+    generate_csv(input, size);
+    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+        false, // dont skip first line 
+        false, // dont skip last line
+        true   // aggregate call
+        ); 
+    ASSERT_EQ(status, 0); 
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
+} 
+
+TEST(TestS3selectFunctions, isnull7)
+{
+    s3select s3select_syntax;
+    const std::string input_query = "select \"true\" from stdin where (null>2 or null<=3) is  null;" ;
+    auto status = s3select_syntax.parse_query(input_query.c_str());
+    ASSERT_EQ(status, 0);
+    s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
+    std::string s3select_result;
+    std::string input;
+    size_t size = 1;
+    generate_csv(input, size);
+    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+        false, // dont skip first line 
+        false, // dont skip last line
+        true   // aggregate call
+        ); 
+    ASSERT_EQ(status, 0); 
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
+} 
+
+TEST(TestS3selectFunctions, isnull8)
+{
+    s3select s3select_syntax;
+    const std::string input_query = "select \"true\" from stdin where (5<4 or null<=3) is  null;" ;
+    auto status = s3select_syntax.parse_query(input_query.c_str());
+    ASSERT_EQ(status, 0);
+    s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
+    std::string s3select_result;
+    std::string input;
+    size_t size = 1;
+    generate_csv(input, size);
+    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+        false, // dont skip first line 
+        false, // dont skip last line
+        true   // aggregate call
+        ); 
+    ASSERT_EQ(status, 0); 
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
+} 
+
+TEST(TestS3selectFunctions, isnull9)
+{
+    s3select s3select_syntax;
+    const std::string input_query = "select \"true\" from stdin where (null<=3 or 5<3) is  null;" ;
+    auto status = s3select_syntax.parse_query(input_query.c_str());
+    ASSERT_EQ(status, 0);
+    s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
+    std::string s3select_result;
+    std::string input;
+    size_t size = 1;
+    generate_csv(input, size);
+    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+        false, // dont skip first line 
+        false, // dont skip last line
+        true   // aggregate call
+        ); 
+    ASSERT_EQ(status, 0); 
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
+}  
+
+TEST(TestS3selectFunctions, isnull10)
+{
+    s3select s3select_syntax;
+    const std::string input_query = "select \"true\" from stdin where (null<=3 or 5>3) ;" ;
+    auto status = s3select_syntax.parse_query(input_query.c_str());
+    ASSERT_EQ(status, 0);
+    s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
+    std::string s3select_result;
+    std::string input;
+    size_t size = 1;
+    generate_csv(input, size);
+    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+        false, // dont skip first line 
+        false, // dont skip last line
+        true   // aggregate call
+        ); 
+    ASSERT_EQ(status, 0); 
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
+}  
+
+TEST(TestS3selectFunctions, nullnot)
+{
+    s3select s3select_syntax;
+    const std::string input_query = "select \"true\" from stdin where not (null>0 and 7<3) ;" ;
+    auto status = s3select_syntax.parse_query(input_query.c_str());
+    ASSERT_EQ(status, 0);
+    s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
+    std::string s3select_result;
+    std::string input;
+    size_t size = 1;
+    generate_csv(input, size);
+    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+        false, // dont skip first line 
+        false, // dont skip last line
+        true   // aggregate call
+        ); 
+    ASSERT_EQ(status, 0); 
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
+}  
+
+TEST(TestS3selectFunctions, nullnot1)
+{
+    s3select s3select_syntax;
+    const std::string input_query = "select \"true\" from stdin where not  (null>0 or 4>3) and (7<1) ;" ;
+    auto status = s3select_syntax.parse_query(input_query.c_str());
+    ASSERT_EQ(status, 0);
+    s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
+    std::string s3select_result;
+    std::string input;
+    size_t size = 1;
+    generate_csv(input, size);
+    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+        false, // dont skip first line 
+        false, // dont skip last line
+        true   // aggregate call
+        ); 
+    ASSERT_EQ(status, 0); 
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
+}  
+
+TEST(TestS3selectFunctions, isnull11)
+{
+    s3select s3select_syntax;
+    const std::string input_query = "select \"true\" from stdin where (5>3 or null<1) ;" ;
+    auto status = s3select_syntax.parse_query(input_query.c_str());
+    ASSERT_EQ(status, 0);
+    s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
+    std::string s3select_result;
+    std::string input;
+    size_t size = 1;
+    generate_csv(input, size);
+    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+        false, // dont skip first line 
+        false, // dont skip last line
+        true   // aggregate call
+        ); 
+    ASSERT_EQ(status, 0); 
+    ASSERT_EQ(s3select_result, std::string("true,\n"));
+}  
 
 TEST(TestS3selectFunctions, likeop)
 {
