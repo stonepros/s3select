@@ -1011,10 +1011,14 @@ void push_negation::builder(s3select* self, const char* a, const char* b) const
     negate_function_operation* nf = S3SELECT_NEW(self, negate_function_operation, pred);
     self->getAction()->condQ.push_back(nf);
   }
-  else
+  else if(pred)
   {
     arithmetic_operand* f = S3SELECT_NEW(self, arithmetic_operand, pred);
     self->getAction()->condQ.push_back(f);
+  }
+  else
+  {
+    throw base_s3select_exception(std::string("failed to create AST for NOT operator"), base_s3select_exception::s3select_exp_en_t::FATAL);
   }
 }
 
