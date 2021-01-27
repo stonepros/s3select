@@ -570,7 +570,6 @@ public:
 
       when_case_else_projection = (bsc::str_p("case")  >> (+when_stmt) >> bsc::str_p("else") >> arithmetic_expression >> bsc::str_p("end")) [BOOST_BIND_ACTION(push_case_when_else)];
 
-      // than => then
       when_stmt = (bsc::str_p("when") >> condition_expression >> bsc::str_p("then") >> arithmetic_expression)[BOOST_BIND_ACTION(push_when_condition_then)];
 
       when_case_value_when = (bsc::str_p("case") >> arithmetic_expression[BOOST_BIND_ACTION(push_case_value)]  >> 
@@ -586,25 +585,27 @@ public:
 
       where_clause = bsc::str_p("where") >> condition_expression;
 
-      condition_expression =  ( bsc::str_p("not") >> binary_condition )[BOOST_BIND_ACTION(push_negation)] | binary_condition;
+      condition_expression = arithmetic_predicate;
 
-      binary_condition = (arithmetic_predicate >> *(log_op[BOOST_BIND_ACTION(push_logical_operator)] >> arithmetic_predicate[BOOST_BIND_ACTION(push_logical_predicate)]));
+      arithmetic_predicate = (bsc::str_p("not") >> logical_predicate)[BOOST_BIND_ACTION(push_negation)] | logical_predicate;
 
-      arithmetic_predicate = (special_predicates) | (factor >> *(arith_cmp[BOOST_BIND_ACTION(push_compare_operator)] >> factor[BOOST_BIND_ACTION(push_arithmetic_predicate)]));
+      logical_predicate =  (cmp_operand) >> *(log_op[BOOST_BIND_ACTION(push_logical_operator)] >> (cmp_operand)[BOOST_BIND_ACTION(push_logical_predicate)]);
+
+      cmp_operand = special_predicates | (factor) >> *(arith_cmp[BOOST_BIND_ACTION(push_compare_operator)] >> (factor)[BOOST_BIND_ACTION(push_arithmetic_predicate)]);
 
       special_predicates = (is_null) | (is_not_null) | (between_predicate) | (in_predicate) | (like_predicate) ;
 
-      is_null = ((arithmetic_expression|factor) >> bsc::str_p("is") >> bsc::str_p("null"))[BOOST_BIND_ACTION(push_is_null_predicate)];
+      is_null = ((factor) >> bsc::str_p("is") >> bsc::str_p("null"))[BOOST_BIND_ACTION(push_is_null_predicate)];
 
-      is_not_null = ((arithmetic_expression|factor) >> bsc::str_p("is") >> bsc::str_p("not") >> bsc::str_p("null"))[BOOST_BIND_ACTION(push_is_null_predicate)];
+      is_not_null = ((factor) >> bsc::str_p("is") >> bsc::str_p("not") >> bsc::str_p("null"))[BOOST_BIND_ACTION(push_is_null_predicate)];
 
-      between_predicate = ( arithmetic_expression >> bsc::str_p("between") >> arithmetic_expression >> bsc::str_p("and") >> arithmetic_expression )[BOOST_BIND_ACTION(push_between_filter)];
+      between_predicate = (arithmetic_expression >> bsc::str_p("between") >> arithmetic_expression >> bsc::str_p("and") >> arithmetic_expression)[BOOST_BIND_ACTION(push_between_filter)];
 
       in_predicate = (arithmetic_expression[BOOST_BIND_ACTION(push_in_predicate_counter_start)] >> bsc::str_p("in") >> '(' >> arithmetic_expression[BOOST_BIND_ACTION(push_in_predicate_counter)] >> *(',' >> arithmetic_expression[BOOST_BIND_ACTION(push_in_predicate_counter)]) >> ')')[BOOST_BIND_ACTION(push_in_predicate)];
 
       like_predicate = (arithmetic_expression >> bsc::str_p("like") >> arithmetic_expression)[BOOST_BIND_ACTION(push_like_predicate)];
 
-      factor = (arithmetic_expression) | ('(' >> condition_expression >> ')') ;
+      factor = arithmetic_expression  | ( '(' >> arithmetic_predicate >> ')' ) ; 
 
       arithmetic_expression = (addsub_operand >> *(addsubop_operator[BOOST_BIND_ACTION(push_addsub)] >> addsub_operand[BOOST_BIND_ACTION(push_addsub_binop)] ));
 
@@ -665,7 +666,6 @@ public:
 
       addsubop_operator = bsc::str_p("+") | bsc::str_p("-");
 
-
       arith_cmp = bsc::str_p(">=") | bsc::str_p("<=") | bsc::str_p("==") | bsc::str_p("<") | bsc::str_p(">") | bsc::str_p("!=");
 
       log_op = bsc::str_p("and") | bsc::str_p("or");
@@ -674,8 +674,11 @@ public:
     }
 
 
-    bsc::rule<ScannerT> cast, data_type, variable, trim_type, trim_remove_type, select_expr, s3_object, where_clause, number, float_number, string, arith_cmp, log_op, condition_expression, binary_condition, arithmetic_predicate, factor, trim, trim_whitespace_both, trim_one_side_whitespace, trim_anychar_anyside, substr, substr_from, substr_from_for, datediff, dateadd, extract, date_part, date_part_extract;
-    bsc::rule<ScannerT> special_predicates,between_predicate, in_predicate, like_predicate, is_null, is_not_null;
+    bsc::rule<ScannerT> cast, data_type, variable,  select_expr, s3_object, where_clause, number, float_number, string;
+    bsc::rule<ScannerT> cmp_operand, arith_cmp, log_op, condition_expression, arithmetic_predicate, logical_predicate, factor; 
+    bsc::rule<ScannerT> trim, trim_whitespace_both, trim_one_side_whitespace, trim_anychar_anyside, trim_type, trim_remove_type, substr, substr_from, substr_from_for;
+    bsc::rule<ScannerT> datediff, dateadd, extract, date_part, date_part_extract;
+    bsc::rule<ScannerT> special_predicates, between_predicate, in_predicate, like_predicate, is_null, is_not_null;
     bsc::rule<ScannerT> muldiv_operator, addsubop_operator, function, arithmetic_expression, addsub_operand, list_of_function_arguments, arithmetic_argument, mulldiv_operand;
     bsc::rule<ScannerT> fs_type, object_path;
     bsc::rule<ScannerT> projections, projection_expression, alias_name, column_pos;
