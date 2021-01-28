@@ -272,7 +272,9 @@ class s3select_reserved_word
   {
     NA,
     S3S_NULL,//TODO check AWS defintions for reserve words, its a long list , what about functions-names? 
-    S3S_NAN 
+    S3S_NAN,
+    S3S_TRUE,
+    S3S_FALSE
   } ;
 
   using reserved_words = std::map<std::string,reserve_word_en_t>;
@@ -280,7 +282,9 @@ class s3select_reserved_word
   const reserved_words m_reserved_words=
   {
     {"null",reserve_word_en_t::S3S_NULL},{"NULL",reserve_word_en_t::S3S_NULL},
-    {"nan",reserve_word_en_t::S3S_NAN},{"NaN",reserve_word_en_t::S3S_NAN}
+    {"nan",reserve_word_en_t::S3S_NAN},{"NaN",reserve_word_en_t::S3S_NAN},
+    {"true",reserve_word_en_t::S3S_TRUE},{"TRUE",reserve_word_en_t::S3S_TRUE},
+    {"false",reserve_word_en_t::S3S_FALSE},{"FALSE",reserve_word_en_t::S3S_FALSE}
   };
 
   bool is_reserved_word(std::string & token)
@@ -437,6 +441,7 @@ public:
     TIMESTAMP,
     S3NULL,
     S3NAN,
+    BOOL,
     NA
   } ;
   value_En_t type;
@@ -492,6 +497,11 @@ public:
     return type == value_En_t::TIMESTAMP;
   }
 
+  bool is_bool() const
+  {
+    return type == value_En_t::BOOL;
+  }
+
   bool is_null() const
   {
     return type == value_En_t::S3NULL;
@@ -514,6 +524,18 @@ public:
   {
     __val.dbl = NAN;
     type = value_En_t::FLOAT;
+  }
+
+  void set_true() 
+  {
+    __val.num = 1;
+    type = value_En_t::BOOL;
+  }
+
+  void set_false() 
+  {
+    __val.num = 0;
+    type = value_En_t::BOOL;
   }
 
   void setnull()
@@ -768,6 +790,11 @@ public:
     if(is_timestamp() && v.is_timestamp())
     {
       return *timestamp() == *(v.timestamp());
+    }
+
+    if(is_bool() && v.is_bool())
+    {
+      return __val.num == v.__val.num;
     }
 
     if (is_nan() || v.is_nan())
@@ -1147,6 +1174,18 @@ public:
       m_var_type = variable::var_t::COL_VALUE;
       column_pos = -1;
       var_value.set_nan();
+    }
+    else if (reserve_word == s3select_reserved_word::reserve_word_en_t::S3S_TRUE)
+    {
+      m_var_type = variable::var_t::COL_VALUE;
+      column_pos = -1;
+      var_value.set_true();
+    }
+    else if (reserve_word == s3select_reserved_word::reserve_word_en_t::S3S_FALSE)
+    {
+      m_var_type = variable::var_t::COL_VALUE;
+      column_pos = -1;
+      var_value.set_false();
     }
     else 
     {

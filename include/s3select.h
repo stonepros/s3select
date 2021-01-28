@@ -772,6 +772,14 @@ void push_variable::builder(s3select* self, const char* a, const char* b) const
     {
       v = S3SELECT_NEW(self, variable, s3select_reserved_word::reserve_word_en_t::S3S_NAN);
     }
+    else if (g_s3select_reserve_word.get_reserved_word(token) == s3select_reserved_word::reserve_word_en_t::S3S_FALSE)
+    {
+      v = S3SELECT_NEW(self, variable, s3select_reserved_word::reserve_word_en_t::S3S_FALSE);
+    }
+    else if (g_s3select_reserve_word.get_reserved_word(token) == s3select_reserved_word::reserve_word_en_t::S3S_TRUE)
+    {
+      v = S3SELECT_NEW(self, variable, s3select_reserved_word::reserve_word_en_t::S3S_TRUE);
+    }
     else
     {
       v = S3SELECT_NEW(self, variable, s3select_reserved_word::reserve_word_en_t::NA);
