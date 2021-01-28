@@ -3392,3 +3392,18 @@ TEST(TestS3selectFunctions, test_trim_expressions)
 
   ASSERT_EQ(s3select_result_3, s3select_result_4);
 }
+
+TEST(TestS3selectFunctions, truefalse)
+{
+  test_single_column_single_row("select 2 from s3object where true or false;","2,\n");
+  test_single_column_single_row("select 2 from s3object where true or true;","2,\n");
+  test_single_column_single_row("select 2 from s3object where null or true ;","2,\n");
+  test_single_column_single_row("select 2 from s3object where true and true;","2,\n");
+  test_single_column_single_row("select 2 from s3object where true == true ;","2,\n");
+  test_single_column_single_row("select 2 from stdin where 1<2 == true;","2,\n");
+  test_single_column_single_row("select 2 from stdin where 1==1 == true;","2,\n");
+  test_single_column_single_row("select 2 from stdin where false==false == true;","2,\n");
+  test_single_column_single_row("select 2 from s3object where false or true;","2,\n");
+  test_single_column_single_row("select true,false from s3object where false == false;","true,false,\n");
+
+}
