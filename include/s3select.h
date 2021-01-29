@@ -54,6 +54,8 @@ struct actionQ
   std::vector<base_statement*> funcQ;
   std::vector<base_statement*> condQ;
   std::vector<base_statement*> whenThenQ;
+  std::vector<base_statement*> inPredicateQ;
+  base_statement* inMainArg;
   std::vector<std::string> dataTypeQ;
   std::vector<std::string> trimTypeQ;
   std::vector<std::string> datePartQ;
@@ -62,11 +64,10 @@ struct actionQ
   std::string from_clause;
   s3select_projections  projections;
 
-  uint64_t in_set_count;
 
   size_t when_then_count;
 
-  actionQ():in_set_count(0), when_then_count(0){}
+  actionQ(): inMainArg(0),when_then_count(0){}
 
   std::map<const void*,std::vector<const char*> *> x_map;
 
@@ -262,17 +263,17 @@ struct push_in_predicate : public base_ast_builder
 };
 static push_in_predicate g_push_in_predicate;
 
-struct push_in_predicate_counter : public base_ast_builder
+struct push_in_predicate_arguments : public base_ast_builder
 {
   void builder(s3select* self, const char* a, const char* b) const;
 };
-static push_in_predicate_counter g_push_in_predicate_counter;
+static push_in_predicate_arguments g_push_in_predicate_arguments;
 
-struct push_in_predicate_counter_start : public base_ast_builder
+struct push_in_predicate_first_arg : public base_ast_builder
 {
   void builder(s3select* self, const char* a, const char* b) const;
 };
-static push_in_predicate_counter_start g_push_in_predicate_counter_start;
+static push_in_predicate_first_arg g_push_in_predicate_first_arg;
 
 struct push_like_predicate : public base_ast_builder
 {
@@ -601,7 +602,7 @@ public:
 
       between_predicate = (arithmetic_expression >> bsc::str_p("between") >> arithmetic_expression >> bsc::str_p("and") >> arithmetic_expression)[BOOST_BIND_ACTION(push_between_filter)];
 
-      in_predicate = (arithmetic_expression[BOOST_BIND_ACTION(push_in_predicate_counter_start)] >> bsc::str_p("in") >> '(' >> arithmetic_expression[BOOST_BIND_ACTION(push_in_predicate_counter)] >> *(',' >> arithmetic_expression[BOOST_BIND_ACTION(push_in_predicate_counter)]) >> ')')[BOOST_BIND_ACTION(push_in_predicate)];
+      in_predicate = (arithmetic_expression >> bsc::str_p("in") >> '(' >> arithmetic_expression[BOOST_BIND_ACTION(push_in_predicate_first_arg)] >> *(',' >> arithmetic_expression[BOOST_BIND_ACTION(push_in_predicate_arguments)]) >> ')')[BOOST_BIND_ACTION(push_in_predicate)];
 
       like_predicate = (arithmetic_expression >> bsc::str_p("like") >> arithmetic_expression)[BOOST_BIND_ACTION(push_like_predicate)];
 
@@ -670,7 +671,7 @@ public:
 
       log_op = bsc::str_p("and") | bsc::str_p("or");
 
-      variable =  bsc::lexeme_d[(+bsc::alpha_p >> *( bsc::alpha_p | bsc::digit_p | '_') )];
+      variable =  bsc::lexeme_d[(+bsc::alpha_p >> *( bsc::alpha_p | bsc::digit_p | '_') ) -  bsc::str_p("not")] ;
     }
 
 
@@ -1094,19 +1095,41 @@ void push_between_filter::builder(s3select* self, const char* a, const char* b) 
   self->getAction()->condQ.push_back(func);
 }
 
-void push_in_predicate_counter::builder(s3select* self, const char* a, const char* b) const
+void push_in_predicate_first_arg::builder(s3select* self, const char* a, const char* b) const
 {
   std::string token(a, b);
 
-  self->getAction()->in_set_count ++;
+  if(self->getAction()->exprQ.empty())
+  {
+    throw base_s3select_exception("failed to create AST for in predicate", base_s3select_exception::s3select_exp_en_t::FATAL);
+  }
+
+  self->getAction()->inPredicateQ.push_back( self->getAction()->exprQ.back() );
+  self->getAction()->exprQ.pop_back();
+
+  if(self->getAction()->exprQ.empty())
+  {
+    throw base_s3select_exception("failed to create AST for in predicate", base_s3select_exception::s3select_exp_en_t::FATAL);
+  }
+
+  self->getAction()->inMainArg = self->getAction()->exprQ.back();
+  self->getAction()->exprQ.pop_back();
+
 
 }
 
-void push_in_predicate_counter_start::builder(s3select* self, const char* a, const char* b) const
+void push_in_predicate_arguments::builder(s3select* self, const char* a, const char* b) const
 {
   std::string token(a, b);
 
-  self->getAction()->in_set_count = 1;
+  if(self->getAction()->exprQ.empty())
+  {
+    throw base_s3select_exception("failed to create AST for in predicate", base_s3select_exception::s3select_exp_en_t::FATAL);
+  }
+
+  self->getAction()->inPredicateQ.push_back( self->getAction()->exprQ.back() );
+
+  self->getAction()->exprQ.pop_back();
 
 }
 
@@ -1119,18 +1142,23 @@ void push_in_predicate::builder(s3select* self, const char* a, const char* b) co
 
   __function* func = S3SELECT_NEW(self, __function, in_function.c_str(), self->getS3F());
 
-  while(self->getAction()->in_set_count)
+  while(!self->getAction()->inPredicateQ.empty())
   {
-    base_statement* ei = self->getAction()->exprQ.back();
+    base_statement* ei = self->getAction()->inPredicateQ.back();
 
-    self->getAction()->exprQ.pop_back();
+    self->getAction()->inPredicateQ.pop_back();
 
     func->push_argument(ei);
 
-    self->getAction()->in_set_count --;
   }
 
+  func->push_argument( self->getAction()->inMainArg );
+
   self->getAction()->condQ.push_back(func);
+
+  self->getAction()->inPredicateQ.clear();
+
+  self->getAction()->inMainArg = 0;
 }
 
 void push_like_predicate::builder(s3select* self, const char* a, const char* b) const
