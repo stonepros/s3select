@@ -590,7 +590,9 @@ public:
 
       arithmetic_predicate = (bsc::str_p("not") >> logical_predicate)[BOOST_BIND_ACTION(push_negation)] | logical_predicate;
 
-      logical_predicate =  (cmp_operand) >> *(log_op[BOOST_BIND_ACTION(push_logical_operator)] >> (cmp_operand)[BOOST_BIND_ACTION(push_logical_predicate)]);
+      logical_predicate =  (logical_and) >> *(or_op[BOOST_BIND_ACTION(push_logical_operator)] >> (logical_and)[BOOST_BIND_ACTION(push_logical_predicate)]);
+
+      logical_and =  (cmp_operand) >> *(and_op[BOOST_BIND_ACTION(push_logical_operator)] >> (cmp_operand)[BOOST_BIND_ACTION(push_logical_predicate)]);
 
       cmp_operand = special_predicates | (factor) >> *(arith_cmp[BOOST_BIND_ACTION(push_compare_operator)] >> (factor)[BOOST_BIND_ACTION(push_arithmetic_predicate)]);
 
@@ -669,14 +671,16 @@ public:
 
       arith_cmp = bsc::str_p(">=") | bsc::str_p("<=") | bsc::str_p("==") | bsc::str_p("<") | bsc::str_p(">") | bsc::str_p("!=");
 
-      log_op = bsc::str_p("and") | bsc::str_p("or");
+      and_op =  bsc::str_p("and");
+
+      or_op =  bsc::str_p("or");
 
       variable =  bsc::lexeme_d[(+bsc::alpha_p >> *( bsc::alpha_p | bsc::digit_p | '_') ) -  bsc::str_p("not")] ;
     }
 
 
     bsc::rule<ScannerT> cast, data_type, variable,  select_expr, s3_object, where_clause, number, float_number, string;
-    bsc::rule<ScannerT> cmp_operand, arith_cmp, log_op, condition_expression, arithmetic_predicate, logical_predicate, factor; 
+    bsc::rule<ScannerT> cmp_operand, arith_cmp, condition_expression, arithmetic_predicate, logical_predicate, factor; 
     bsc::rule<ScannerT> trim, trim_whitespace_both, trim_one_side_whitespace, trim_anychar_anyside, trim_type, trim_remove_type, substr, substr_from, substr_from_for;
     bsc::rule<ScannerT> datediff, dateadd, extract, date_part, date_part_extract;
     bsc::rule<ScannerT> special_predicates, between_predicate, in_predicate, like_predicate, is_null, is_not_null;
@@ -684,6 +688,7 @@ public:
     bsc::rule<ScannerT> fs_type, object_path;
     bsc::rule<ScannerT> projections, projection_expression, alias_name, column_pos;
     bsc::rule<ScannerT> when_case_else_projection, when_case_value_when, when_stmt, when_value_then;
+    bsc::rule<ScannerT> logical_and,and_op,or_op;
     bsc::rule<ScannerT> const& start() const
     {
       return select_expr;

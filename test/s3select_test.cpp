@@ -721,6 +721,8 @@ TEST(TestS3selectFunctions, syntax_1)
   test_single_column_single_row("select count(*) from stdin where ((not (1<11)) is not null);","1,");
   test_single_column_single_row("select count(*) from stdin where not(not (1<11));","1,");
   test_single_column_single_row("select count(*) from stdin where not (1<11);","0,");
+  test_single_column_single_row("select count(*) from stdin where 1==1 or 2==2 and 4==4 and 2==4;","1,");
+  test_single_column_single_row("select count(*) from stdin where 2==2 and 4==4 and 2==4 or 1==1;","1,");
 }
 
 TEST(TestS3selectFunctions, binop_constant)
