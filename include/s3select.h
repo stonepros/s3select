@@ -954,11 +954,37 @@ void push_arithmetic_predicate::builder(s3select* self, const char* a, const cha
   base_statement* vr, *vl;
   arithmetic_operand::cmp_t c = self->getAction()->arithmetic_compareQ.back();
   self->getAction()->arithmetic_compareQ.pop_back();
-  vr = self->getAction()->exprQ.back();
-  self->getAction()->exprQ.pop_back();
-  vl = self->getAction()->exprQ.back();
-  self->getAction()->exprQ.pop_back();
 
+  if (!self->getAction()->exprQ.empty())
+  {
+    vr = self->getAction()->exprQ.back();
+    self->getAction()->exprQ.pop_back();
+  }
+  else if(!self->getAction()->condQ.empty())
+  {
+    vr = self->getAction()->condQ.back();
+    self->getAction()->condQ.pop_back();
+  }
+  else
+  {
+    throw base_s3select_exception(std::string("missing right operand for arithmetic-comparision expression"), base_s3select_exception::s3select_exp_en_t::FATAL);
+  }
+  
+  if (!self->getAction()->exprQ.empty())
+  {
+    vl = self->getAction()->exprQ.back();
+    self->getAction()->exprQ.pop_back();
+  }
+  else if(!self->getAction()->condQ.empty())
+  {
+    vl = self->getAction()->condQ.back();
+    self->getAction()->condQ.pop_back();
+  }
+  else
+  {
+    throw base_s3select_exception(std::string("missing left operand for arithmetic-comparision expression"), base_s3select_exception::s3select_exp_en_t::FATAL);
+  }
+  
   arithmetic_operand* t = S3SELECT_NEW(self, arithmetic_operand, vl, c, vr);
 
   self->getAction()->condQ.push_back(t);
