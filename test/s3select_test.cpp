@@ -3400,5 +3400,25 @@ TEST(TestS3selectFunctions, truefalse)
   test_single_column_single_row("select 2 from s3object where null or true ;","2,\n");
   test_single_column_single_row("select 2 from s3object where true and true;","2,\n");
   test_single_column_single_row("select 2 from s3object where true == true ;","2,\n");
-  test_single_column_single_row("select 2 from stdin where 1<2 == true;","2,\n");
+  test_single_column_single_row("select 2 from s3object where 1<2 == true;","2,\n");
+  test_single_column_single_row("select count(*) from s3object where not (1>2) == true;","1,");
+  test_single_column_single_row("select count(*) from s3object where not (1>2) == (not false);","1,");
 }
+
+TEST(TestS3selectFunctions, predicate_as_projection_column)
+{
+  std::string input;
+  size_t size = 10000;
+  generate_rand_columns_csv(input, size);
+  const std::string input_query = "select (int(_2) between int(_3) and int(_4)) from s3object where int(_2)>int(_3) and int(_2)<int(_4);";
+
+  std::string s3select_result = run_s3select(input_query,input);
+
+  ASSERT_NE(s3select_result,failure_sign);
+
+  auto count = std::count(s3select_result.begin(), s3select_result.end(), '0');
+
+  ASSERT_EQ(count,0);
+
+}
+
