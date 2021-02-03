@@ -1026,18 +1026,23 @@ void push_negation::builder(s3select* self, const char* a, const char* b) const
     pred = self->getAction()->exprQ.back();
     self->getAction()->exprQ.pop_back();
   }
+  else
+  {
+    throw base_s3select_exception(std::string("failed to create AST for NOT operator"), base_s3select_exception::s3select_exp_en_t::FATAL);
+  }
+  
   //upon NOT operator, the logical and arithmetical operators are "tagged" to negate result.
   if (dynamic_cast<logical_operand*>(pred))
   {
     logical_operand* f = S3SELECT_NEW(self, logical_operand, pred);
     self->getAction()->exprQ.push_back(f);
   }
-  else if (dynamic_cast<__function*>(pred) || dynamic_cast<negate_function_operation*>(pred))
+  else if (dynamic_cast<__function*>(pred) || dynamic_cast<negate_function_operation*>(pred) || dynamic_cast<variable*>(pred))
   {
     negate_function_operation* nf = S3SELECT_NEW(self, negate_function_operation, pred);
     self->getAction()->exprQ.push_back(nf);
   }
-  else if(pred && dynamic_cast<arithmetic_operand*>(pred))
+  else if(dynamic_cast<arithmetic_operand*>(pred))
   {
     arithmetic_operand* f = S3SELECT_NEW(self, arithmetic_operand, pred);
     self->getAction()->exprQ.push_back(f);

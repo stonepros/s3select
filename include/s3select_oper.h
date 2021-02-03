@@ -792,7 +792,13 @@ public:
       return *timestamp() == *(v.timestamp());
     }
 
-    if(is_number() || (is_bool() && v.is_bool()))
+    if(
+    (is_bool() && v.is_bool())
+    ||
+    (is_number() && v.is_bool())
+    ||
+    (is_bool() && v.is_number())
+    )
     {
       return __val.num == v.__val.num;
     }
@@ -1732,7 +1738,7 @@ class negate_function_operation : public base_statement
   {
     res = function_to_negate->eval();
 
-    if (res.is_number())//TODO is integer type
+    if (res.is_number() || res.is_bool())//TODO is integer type
     {
       if (res.is_true())
       {
