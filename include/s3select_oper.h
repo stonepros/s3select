@@ -1240,6 +1240,7 @@ public:
   void set_value(bool b)
   {
   	var_value = b;
+    var_value.type = value::value_En_t::BOOL;
   }
 
   void set_null()

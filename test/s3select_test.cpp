@@ -3409,6 +3409,14 @@ TEST(TestS3selectFunctions, truefalse)
   test_single_column_single_row("select count(*) from s3object where not (1>2) == (not false);","1,");
 }
 
+TEST(TestS3selectFunctions, boolcast)
+{
+  test_single_column_single_row("select cast(5 as bool) from s3object;","true,\n");
+  test_single_column_single_row("select cast(0 as bool) from s3object;","false,\n");
+  test_single_column_single_row("select cast(true as bool) from s3object;","true,\n");
+  test_single_column_single_row("select cast('a' as bool) from s3object;","false,\n");
+}
+
 TEST(TestS3selectFunctions, predicate_as_projection_column)
 {
   std::string input;

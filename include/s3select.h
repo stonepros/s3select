@@ -627,7 +627,7 @@ public:
 
       cast = (bsc::str_p("cast") >> '(' >> arithmetic_expression >> bsc::str_p("as") >> (data_type)[BOOST_BIND_ACTION(push_data_type)] >> ')') [BOOST_BIND_ACTION(push_cast_expr)];
 
-      data_type = (bsc::str_p("int") | bsc::str_p("float") | bsc::str_p("string") |  bsc::str_p("timestamp") );
+      data_type = (bsc::str_p("int") | bsc::str_p("float") | bsc::str_p("string") |  bsc::str_p("timestamp") | bsc::str_p("bool") );
      
       substr = (substr_from) | (substr_from_for);
       
@@ -1372,6 +1372,9 @@ void push_data_type::builder(s3select* self, const char* a, const char* b) const
   }else if(cast_operator("timestamp"))
   {
     self->getAction()->dataTypeQ.push_back("to_timestamp");
+  }else if(cast_operator("bool"))
+  {
+    self->getAction()->dataTypeQ.push_back("to_bool");
   }
 }
 
