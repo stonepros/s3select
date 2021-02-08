@@ -3413,6 +3413,7 @@ TEST(TestS3selectFunctions, truefalse)
   test_single_column_single_row("select (false or false) from s3object;","false,\n");
   test_single_column_single_row("select (not true) from s3object;","false,\n");
   test_single_column_single_row("select (not 1 > 2) from s3object;","true,\n");
+  test_single_column_single_row("select (not 1 > 2) as a1,cast(a1 as int)*4 from s3object;","true,4,\n");
   test_single_column_single_row("select (1 > 2) from s3object;","false,\n");
 }
 
