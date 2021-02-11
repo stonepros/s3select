@@ -2215,6 +2215,11 @@ TEST(TestS3selectFunctions, likeop5false)
 test_single_column_single_row( "select \"true\" from stdin where not  \"abcde\" like \"[d-f]bcde\";" ,"true,\n");
 }
 
+TEST(TestS3selectFunctions, likeopdynamic)
+{
+test_single_column_single_row( "select \"true\" from stdin where \"abcde\" like substring(\"abcdefg\",1,5);" ,"true,\n");
+}
+
 TEST(TestS3selectFunctions, likeop5not)
 {
 test_single_column_single_row( "select \"true\" from stdin where \"abcde\" like \"[^d-f]bcde\";" ,"true,\n");
@@ -2480,3 +2485,24 @@ TEST(TestS3selectFunctions, trim11)
 test_single_column_single_row( "select trim(trailing from trim(leading from \"   foobar   \")) from stdin ;" ,"foobar,\n");
 }
 
+TEST(TestS3selectFunctions, likescape)
+{
+  test_single_column_single_row("select \"true\" from stdin where  \"abc_defgh\" like \"abc$_defgh\" escape \"$\";","true,\n");
+  test_single_column_single_row("select \"true\" from s3object where  \"j_kerhai\" like \"j#_%\" escape \"#\";","true,\n");
+  test_single_column_single_row("select \"true\" from s3object where  \"jok_ai\" like \"%#_ai\" escape \"#\";","true,\n");
+  test_single_column_single_row("select \"true\" from s3object where  \"jo_aibc\" like \"%#_ai%\" escape \"#\";","true,\n");
+  test_single_column_single_row("select \"true\" from s3object where  \"jok%abc\" like \"jok$%abc\" escape \"$\";","true,\n");
+  test_single_column_single_row("select \"true\" from s3object where  \"ab%%a\" like \"ab$%%a\" escape \"$\";","true,\n");
+  test_single_column_single_row("select \"true\" from s3object where  \"_a_\" like \"=_a=_\" escape \"=\";","true,\n");
+  test_single_column_single_row("select \"true\" from s3object where  \"abc#efgh\" like \"abc##efgh\" escape \"#\";","true,\n");
+  test_single_column_single_row("select \"true\" from s3object where  \"%abs%\" like \"#%abs#%\" escape \"#\";","true,\n");
+  test_single_column_single_row("select \"true\" from s3object where  \"abc##efgh\" like \"abc####efgh\" escape \"#\";","true,\n");
+}
+
+TEST(TestS3selectFunctions, likescapedynamic)
+{
+test_single_column_single_row( "select \"true\" from s3object where  \"abc#efgh\" like substring(\"abc##efghi\",1,9) escape \"#\";" ,"true,\n");
+test_single_column_single_row( "select \"true\" from s3object where  \"abcdefgh\" like substring(\"abcd%abc\",1,5);" ,"true,\n");
+test_single_column_single_row( "select \"true\" from s3object where  substring(\"abcde\",1,5) like \"abcd_\" ;" ,"true,\n");
+test_single_column_single_row( "select \"true\" from s3object where  substring(\"abcde\",1,5) like substring(\"abcd_ab\",1,5) ;" ,"true,\n");
+}
