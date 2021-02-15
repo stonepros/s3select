@@ -108,12 +108,13 @@ private:
 
   std::unique_ptr<boost::crc_32_type> crc32;
 
-  int create_message(char *buff, u_int32_t result_len, u_int32_t header_len)
+  int create_message(std::string &out_string, u_int32_t result_len, u_int32_t header_len)
   {
     u_int32_t total_byte_len = 0;
     u_int32_t preload_crc = 0;
     u_int32_t message_crc = 0;
     int i = 0;
+    char *buff = out_string.data();
 
     if (crc32 == 0)
     {
@@ -136,7 +137,10 @@ private:
     crc32->reset();
     *crc32 = std::for_each(buff, buff + i, *crc32);
     message_crc = (*crc32)();
-    encode_int(&buff[i], message_crc, i);
+
+    int out_encode;
+    encode_int(reinterpret_cast<char*>(&out_encode), message_crc, i);
+    out_string.append(reinterpret_cast<char*>(&out_encode),sizeof(out_encode));
 
     return i;
   }
@@ -223,7 +227,7 @@ public:
     if (m_result.size() > strlen(PAYLOAD_LINE))
     {
       m_result.append(END_PAYLOAD_LINE);
-      create_message(m_result.data(), m_result.size() - 12, header_size);
+      create_message(m_result, m_result.size() - 12, header_size);
       //s->formatter->write_bin_data(m_result.data(), buff_len);
       //if (op_ret < 0)
       //{
