@@ -132,6 +132,7 @@ int main(int argc, char** argv)
   }
 
   struct stat statbuf;
+  bool to_aggregate=false;
 
   lstat(object_name.c_str(), &statbuf);
 
@@ -157,11 +158,19 @@ int main(int argc, char** argv)
     //input_sz = strlen(buff);
     //size_t input_sz = in == 0 ? 0 : strlen(in);
 
-    //if (!input_sz) to_aggregate = true;
 
-
-    //int status = s3_csv_object.run_s3select_on_object(s3select_result,in,input_sz,false,false,to_aggregate);
-    int status = s3_csv_object.run_s3select_on_stream(s3select_result, in, input_sz, statbuf.st_size);
+    if(fp == stdin)
+    {
+      if (feof(fp)) 
+      {
+	to_aggregate = true;
+      }
+      status = s3_csv_object.run_s3select_on_object(s3select_result,in,input_sz,false,false,to_aggregate);
+    }
+    else
+    {
+      status = s3_csv_object.run_s3select_on_stream(s3select_result, in, input_sz, statbuf.st_size);
+    }
     if(status<0)
     {
       std::cout << "failure on execution " << std::endl << s3_csv_object.get_error_description() <<  std::endl;
