@@ -332,8 +332,6 @@ int run_on_localFile(char*  input_query)
     return -1;
   }
 
-
-
   int status = s3select_syntax.parse_query(input_query);
   if (status != 0)
   {
@@ -393,7 +391,6 @@ int run_on_localFile(char*  input_query)
     }
 
     int status;
-
     if(do_aggregate == true)
     {
       status = s3_csv_object.run_s3select_on_object(s3select_result, in, input_sz, false, false, do_aggregate);
