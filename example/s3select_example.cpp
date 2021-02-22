@@ -368,6 +368,7 @@ int run_on_localFile(char*  input_query)
   std::string s3select_result;
   s3selectEngine::csv_object::csv_defintions csv;
   csv.use_header_info = false;
+  bool do_aggregate = false;
   //csv.column_delimiter='|';
   //csv.row_delimiter='\t';
 
@@ -386,9 +387,13 @@ int run_on_localFile(char*  input_query)
     //input_sz = strlen(buff);
     //size_t input_sz = in == 0 ? 0 : strlen(in);
 
-    //if (!input_sz) to_aggregate = true;
+    if (!input_sz || feof(fp)) 
+    {
+        do_aggregate = true;
+    }
 
-    int status = s3_csv_object.run_s3select_on_stream(s3select_result, in, input_sz, statbuf.st_size);
+    int status = s3_csv_object.run_s3select_on_object(s3select_result, in, input_sz, false, false, do_aggregate);
+    //int status = s3_csv_object.run_s3select_on_stream(s3select_result, in, input_sz, statbuf.st_size);
     if(status<0)
     {
       std::cout << "failure on execution " << std::endl << s3_csv_object.get_error_description() <<  std::endl;

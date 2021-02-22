@@ -795,7 +795,7 @@ struct _fn_to_timestamp : public base_function
 
       result->set_value(&new_ptime);
     #else
-      if (frac_sec >= 0 && frac_sec < 10)
+      if (frac_sec < 10)
               frac_sec = frac_sec * 100000;
       else if (frac_sec >= 10 && frac_sec < 100)
               frac_sec = frac_sec * 10000;
@@ -803,7 +803,7 @@ struct _fn_to_timestamp : public base_function
               frac_sec = frac_sec * 1000;
       else if (frac_sec >= 1000 && frac_sec < 10000)
               frac_sec = frac_sec * 100;
-      else if (frac_sec >= 0 && frac_sec < 100000)
+      else if (frac_sec < 100000)
               frac_sec = frac_sec * 10;
 
       //TODO: Include timezone hours(tz_hr) and timezone minutes(tz_mn) in date time calculation.
