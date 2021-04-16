@@ -103,9 +103,6 @@ struct actionQ
     return false;
   }
 
-  uint64_t in_set_count;
-
-
 };
 
 class s3select;
@@ -776,10 +773,8 @@ void push_from_clause::builder(s3select* self, const char* a, const char* b) con
 
   self->getAction()->from_clause = token; //TODO add table alias 
 
-
   self->getAction()->exprQ.clear();
 
-  self->getAction()->projection_or_predicate_state = false;//parser is now on where-clause 
 }
 
 void push_number::builder(s3select* self, const char* a, const char* b) const
@@ -876,7 +871,6 @@ void push_variable::builder(s3select* self, const char* a, const char* b) const
   }
   
   self->getAction()->exprQ.push_back(v);
-
 }
 
 void push_addsub::builder(s3select* self, const char* a, const char* b) const
@@ -1170,7 +1164,6 @@ void push_column_pos::builder(s3select* self, const char* a, const char* b) cons
   }
 
   self->getAction()->exprQ.push_back(v);
-
 }
 
 void push_projection::builder(s3select* self, const char* a, const char* b) const

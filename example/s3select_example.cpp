@@ -337,7 +337,9 @@ int run_query_on_parquet_file(const char* input_query, const char* input_file)
   return 0;
 }
 
-int main(int argc, char** argv)
+int run_on_localFile(char*  input_query);
+
+int main(int argc,char **argv)
 {
 //purpose:to run the engine on a single query.
 awsCli_handler awscli;
@@ -509,6 +511,7 @@ int run_on_localFile(char*  input_query)
     {
       status = s3_csv_object.run_s3select_on_stream(s3select_result, in, input_sz, statbuf.st_size);
     }
+
     if(status<0)
     {
       std::cout << "failure on execution " << std::endl << s3_csv_object.get_error_description() <<  std::endl;

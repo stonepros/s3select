@@ -538,7 +538,7 @@ public:
     type = value_En_t::S3NULL;
   }
 
-  std::string& to_string()  //TODO very intensive , must improve this
+  std::string to_string()  //TODO very intensive , must improve this
   {
 
     if (type != value_En_t::STRING)
@@ -599,7 +599,7 @@ public:
       m_to_string.assign( __val.str );
     }
 
-    return m_to_string; 
+    return std::string( m_to_string.c_str() );
   }
 
 
@@ -1053,7 +1053,7 @@ public:
 
     if (parquet_type == false)
     {
-      if ((column_pos >= m_upper_bound) || column_pos < 0)
+      if (column_pos >= m_upper_bound) //|| column_pos < 0)
       {
         throw base_s3select_exception("column_position_is_wrong", base_s3select_exception::s3select_exp_en_t::ERROR);
       }
@@ -1468,7 +1468,7 @@ public:
 
   virtual bool is_column() const //is reference to column.
   {
-    if(m_var_type == var_t::VAR || m_var_type == var_t::POS || m_var_type == var_t::STAR_OPERATION)
+    if(m_var_type == var_t::VAR || m_var_type == var_t::POS)
     {
       return true;
     }
