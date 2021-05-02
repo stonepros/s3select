@@ -495,7 +495,6 @@ public:
     }
     catch (base_s3select_exception& e)
     {
-      std::cout << e.what() << std::endl;
       error_description.assign(e.what());
       if (e.severity() == base_s3select_exception::s3select_exp_en_t::FATAL) //abort query execution
       {
@@ -2131,7 +2130,6 @@ public:
       }
       catch (base_s3select_exception& e)
       {
-        std::cout << e.what() << std::endl;
         m_error_description = e.what();
         m_error_count ++;
         if (e.severity() == base_s3select_exception::s3select_exp_en_t::FATAL || m_error_count>100 || (m_stream>=m_end_stream))//abort query execution
@@ -2209,7 +2207,6 @@ public:
       }
       catch (base_s3select_exception &e)
       {
-        std::cout << e.what() << std::endl;
         m_error_description = e.what();
         m_error_count++;
         if (e.severity() == base_s3select_exception::s3select_exp_en_t::FATAL || m_error_count > 100) //abort query execution
@@ -2219,7 +2216,6 @@ public:
       }
       catch (std::exception &e)
       {
-        std::cout << e.what() << std::endl;
         m_error_description = e.what();
         m_error_count++;
         if (m_error_count > 100) //abort query execution
@@ -2336,7 +2332,7 @@ public:
           a.second->invalidate_cache_result();
         }
 
-        if (!m_where_clause || m_where_clause->eval().i64() == true)
+        if (!m_where_clause || m_where_clause->eval().is_true())
         {
           object_reader->get_column_values_by_positions(m_projections_columns, m_projections_values);
           m_sa->update(m_projections_values, m_projections_columns);
@@ -2366,7 +2362,7 @@ public:
 
           m_sa->update(m_predicate_values, m_where_clause_columns);
 
-          if (m_where_clause->eval().i64() == true)
+          if (m_where_clause->eval().is_true())
             break;
           else
             next_rownum_status = object_reader->increase_rownum();

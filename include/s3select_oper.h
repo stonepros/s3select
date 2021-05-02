@@ -417,9 +417,9 @@ public:
 private:
   value_t __val;
   //std::string m_to_string;
-  std::basic_string<char,std::char_traits<char>,ChunkAllocator<char,256>> m_to_string;
+  std::basic_string<char,std::char_traits<char>,ChunkAllocator<char,512>> m_to_string;
   //std::string m_str_value;
-  std::basic_string<char,std::char_traits<char>,ChunkAllocator<char,256>> m_str_value;
+  std::basic_string<char,std::char_traits<char>,ChunkAllocator<char,512>> m_str_value;
 
 public:
   enum class value_En_t
@@ -538,7 +538,7 @@ public:
     type = value_En_t::S3NULL;
   }
 
-  std::string to_string()  //TODO very intensive , must improve this
+  const char* to_string()  //TODO very intensive , must improve this
   {
 
     if (type != value_En_t::STRING)
@@ -599,7 +599,7 @@ public:
       m_to_string.assign( __val.str );
     }
 
-    return std::string( m_to_string.c_str() );
+    return  m_to_string.c_str();
   }
 
 
@@ -1081,7 +1081,7 @@ public:
      }
      else
      {
-       return  (*m_schema_values)[ column_pos ].to_string().c_str();
+       return  (*m_schema_values)[ column_pos ].to_string();
      }
   }
 
@@ -1134,6 +1134,11 @@ public:
               (*m_schema_values)[ *column_pos_iter ] = str_buff+buff_loc;
               buff_loc += v.str_len+1;
               break;
+
+        case  parquet_file_parser::parquet_type::PARQUET_NULL:
+	      
+              (*m_schema_values)[ *column_pos_iter ].setnull();
+	      break;
 
         default:
         return -1;
@@ -1468,7 +1473,7 @@ public:
 
   virtual bool is_column() const //is reference to column.
   {
-    if(m_var_type == var_t::VAR || m_var_type == var_t::POS)
+    if(m_var_type == var_t::VAR || m_var_type == var_t::POS || m_var_type == var_t::STAR_OPERATION)
     {
       return true;
     }
