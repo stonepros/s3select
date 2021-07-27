@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <boost/crc.hpp>
 #include <arpa/inet.h>
-#include <filesystem>
+#include <boost/filesystem.hpp>
 #include <boost/tokenizer.hpp>
 
 using namespace s3selectEngine;
@@ -443,7 +443,7 @@ int run_on_single_query(const char* fname, const char* query)
   }
 
   int status;
-  auto file_sz = std::filesystem::file_size(fname);
+  auto file_sz = boost::filesystem::file_size(fname);
 
   s3selectEngine::csv_object::csv_defintions csv;
   csv.use_header_info = false;
@@ -512,7 +512,7 @@ int main(int argc,char **argv)
 	{
 		std::fstream f(query_file, std::ios::in | std::ios::binary);
 
-		const auto sz = std::filesystem::file_size(query_file);
+		const auto sz = boost::filesystem::file_size(query_file);
 
 		std::string result(sz, '\0');
 
