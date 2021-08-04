@@ -13,7 +13,6 @@
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 #include <functional>
-#include <boost/algorithm/string.hpp>
 
 
 #define _DEBUG_TERM {string  token(a,b);std::cout << __FUNCTION__ << token << std::endl;}
@@ -61,12 +60,14 @@ struct actionQ
   std::vector<base_statement*> caseValueQ;
   projection_alias alias_map;
   std::string from_clause;
+  std::string column_prefix;
+  std::string table_alias;
   s3select_projections  projections;
 
 
   size_t when_then_count;
 
-  actionQ(): inMainArg(0),from_clause("##"),when_then_count(0){}//TODO remove when_then_count
+  actionQ(): inMainArg(0),from_clause("##"),column_prefix("##"),table_alias("##"),when_then_count(0){}//TODO remove when_then_count
 
   std::map<const void*,std::vector<const char*> *> x_map;
 
@@ -568,6 +569,8 @@ public:
     m_s3select_functions.clean();
   }
 
+//the input is converted to lower case
+#define S3SELECT_KW( reserve_word ) bsc::as_lower_d[ reserve_word ]
 
   template <typename ScannerT>
   struct definition
@@ -576,57 +579,43 @@ public:
     {
       ///// s3select syntax rules and actions for building AST
 
-      //should define globally 
-      auto my_upper = [](const char*c)
-      {
-	  std::string cp;
-	  cp.assign(c);
-
-	  std::string up =  boost::to_upper_copy<std::string>(cp);
-	  return up;
-      };
-
-      //TODO shoud define globaly (use template defintion)
-      //#define ncslit( x ) (bsc::str_p(x)|bsc::str_p(my_upper(x).data()))
-      #define ncslit( x ) (bsc::str_p(x))
-
       select_expr =  (select_expr_base >> ';') | select_expr_base;
 
-      select_expr_base =  (ncslit("select")|bsc::str_p("SELECT")) >> projections >> (ncslit("from")|bsc::str_p("FROM")) >> (from_expression)[BOOST_BIND_ACTION(push_from_clause)] >> !where_clause ;
+      select_expr_base =  S3SELECT_KW("select") >> projections >> S3SELECT_KW("from") >> (from_expression)[BOOST_BIND_ACTION(push_from_clause)] >> !where_clause ;
 
       projections = projection_expression >> *( ',' >> projection_expression) ;
 
       projection_expression = (when_case_else_projection|when_case_value_when) [BOOST_BIND_ACTION(push_projection)] | 
-                              (arithmetic_expression >> ncslit("as") >> alias_name)[BOOST_BIND_ACTION(push_alias_projection)] | 
+                              (arithmetic_expression >> S3SELECT_KW("as") >> alias_name)[BOOST_BIND_ACTION(push_alias_projection)] | 
                               (arithmetic_expression)[BOOST_BIND_ACTION(push_projection)] | 
-			      (arithmetic_predicate >> ncslit("as") >> alias_name)[BOOST_BIND_ACTION(push_alias_projection)] |
+			      (arithmetic_predicate >> S3SELECT_KW("as") >> alias_name)[BOOST_BIND_ACTION(push_alias_projection)] |
                               (arithmetic_predicate)[BOOST_BIND_ACTION(push_projection)] ;
 
       alias_name = bsc::lexeme_d[(+bsc::alpha_p >> *bsc::digit_p)] ;
 
-      when_case_else_projection = (ncslit("case")  >> (+when_stmt) >> ncslit("else") >> arithmetic_expression >> ncslit("end")) [BOOST_BIND_ACTION(push_case_when_else)];
+      when_case_else_projection = (S3SELECT_KW("case")  >> (+when_stmt) >> S3SELECT_KW("else") >> arithmetic_expression >> S3SELECT_KW("end")) [BOOST_BIND_ACTION(push_case_when_else)];
 
-      when_stmt = (ncslit("when") >> condition_expression >> ncslit("then") >> arithmetic_expression)[BOOST_BIND_ACTION(push_when_condition_then)];
+      when_stmt = (S3SELECT_KW("when") >> condition_expression >> S3SELECT_KW("then") >> arithmetic_expression)[BOOST_BIND_ACTION(push_when_condition_then)];
 
-      when_case_value_when = (ncslit("case") >> arithmetic_expression[BOOST_BIND_ACTION(push_case_value)]  >> 
-                              (+when_value_then) >> ncslit("else") >> arithmetic_expression >> ncslit("end")) [BOOST_BIND_ACTION(push_case_when_else)];
+      when_case_value_when = (S3SELECT_KW("case") >> arithmetic_expression[BOOST_BIND_ACTION(push_case_value)]  >> 
+                              (+when_value_then) >> S3SELECT_KW("else") >> arithmetic_expression >> S3SELECT_KW("end")) [BOOST_BIND_ACTION(push_case_when_else)];
 
-      when_value_then = (ncslit("when") >> arithmetic_expression >> ncslit("then") >> arithmetic_expression)[BOOST_BIND_ACTION(push_when_value_then)];
+      when_value_then = (S3SELECT_KW("when") >> arithmetic_expression >> S3SELECT_KW("then") >> arithmetic_expression)[BOOST_BIND_ACTION(push_when_value_then)];
 
-      from_expression = (s3_object >> (variable - (ncslit("where")|bsc::str_p("WHERE")) )) | s3_object;
+      from_expression = (s3_object >> (variable - S3SELECT_KW("where"))) | s3_object;
 
       //the stdin and object_path are for debug purposes(not part of the specs)
-      s3_object = ncslit("stdin") | ncslit("s3object") | bsc::str_p("S3Object") | object_path ;
+      s3_object = S3SELECT_KW("stdin") | S3SELECT_KW("s3object") | object_path ;
 
       object_path = "/" >> *( fs_type >> "/") >> fs_type;
 
       fs_type = bsc::lexeme_d[+( bsc::alnum_p | bsc::str_p(".")  | bsc::str_p("_")) ];
 
-      where_clause = (bsc::str_p("WHERE")|bsc::str_p("where")) >> condition_expression;
+      where_clause = S3SELECT_KW("where") >> condition_expression;
 
       condition_expression = arithmetic_predicate;
 
-      arithmetic_predicate = (ncslit("not") >> logical_predicate)[BOOST_BIND_ACTION(push_negation)] | logical_predicate;
+      arithmetic_predicate = (S3SELECT_KW("not") >> logical_predicate)[BOOST_BIND_ACTION(push_negation)] | logical_predicate;
 
       logical_predicate =  (logical_and) >> *(or_op[BOOST_BIND_ACTION(push_logical_operator)] >> (logical_and)[BOOST_BIND_ACTION(push_logical_predicate)]);
 
@@ -636,19 +625,19 @@ public:
 
       special_predicates = (is_null) | (is_not_null) | (between_predicate) | (in_predicate) | (like_predicate);
 
-      is_null = ((factor) >> ncslit("is") >> ncslit("null"))[BOOST_BIND_ACTION(push_is_null_predicate)];
+      is_null = ((factor) >> S3SELECT_KW("is") >> S3SELECT_KW("null"))[BOOST_BIND_ACTION(push_is_null_predicate)];
 
-      is_not_null = ((factor) >> ncslit("is") >> ncslit("not") >> ncslit("null"))[BOOST_BIND_ACTION(push_is_null_predicate)];
+      is_not_null = ((factor) >> S3SELECT_KW("is") >> S3SELECT_KW("not") >> S3SELECT_KW("null"))[BOOST_BIND_ACTION(push_is_null_predicate)];
 
-      between_predicate = (arithmetic_expression >> ncslit("between") >> arithmetic_expression >> ncslit("and") >> arithmetic_expression)[BOOST_BIND_ACTION(push_between_filter)];
+      between_predicate = (arithmetic_expression >> S3SELECT_KW("between") >> arithmetic_expression >> S3SELECT_KW("and") >> arithmetic_expression)[BOOST_BIND_ACTION(push_between_filter)];
 
-      in_predicate = (arithmetic_expression >> ncslit("in") >> '(' >> arithmetic_expression[BOOST_BIND_ACTION(push_in_predicate_first_arg)] >> *(',' >> arithmetic_expression[BOOST_BIND_ACTION(push_in_predicate_arguments)]) >> ')')[BOOST_BIND_ACTION(push_in_predicate)];
+      in_predicate = (arithmetic_expression >> S3SELECT_KW("in") >> '(' >> arithmetic_expression[BOOST_BIND_ACTION(push_in_predicate_first_arg)] >> *(',' >> arithmetic_expression[BOOST_BIND_ACTION(push_in_predicate_arguments)]) >> ')')[BOOST_BIND_ACTION(push_in_predicate)];
       
       like_predicate = (like_predicate_escape) |(like_predicate_no_escape);
 
-      like_predicate_no_escape = (arithmetic_expression >> ncslit("like") >> arithmetic_expression)[BOOST_BIND_ACTION(push_like_predicate_no_escape)];
+      like_predicate_no_escape = (arithmetic_expression >> S3SELECT_KW("like") >> arithmetic_expression)[BOOST_BIND_ACTION(push_like_predicate_no_escape)];
 
-      like_predicate_escape = (arithmetic_expression >> ncslit("like") >> arithmetic_expression >> ncslit("escape") >> arithmetic_expression)[BOOST_BIND_ACTION(push_like_predicate_escape)];
+      like_predicate_escape = (arithmetic_expression >> S3SELECT_KW("like") >> arithmetic_expression >> S3SELECT_KW("escape") >> arithmetic_expression)[BOOST_BIND_ACTION(push_like_predicate_escape)];
 
       factor = arithmetic_expression  | ( '(' >> arithmetic_predicate >> ')' ) ; 
 
@@ -667,41 +656,41 @@ public:
                             (cast) | (substr) | (trim) |
                             (function) | (variable)[BOOST_BIND_ACTION(push_variable)]; //function is pushed by right-term
 
-      cast = (ncslit("cast") >> '(' >> arithmetic_expression >> ncslit("as") >> (data_type)[BOOST_BIND_ACTION(push_data_type)] >> ')') [BOOST_BIND_ACTION(push_cast_expr)];
+      cast = (S3SELECT_KW("cast") >> '(' >> arithmetic_expression >> S3SELECT_KW("as") >> (data_type)[BOOST_BIND_ACTION(push_data_type)] >> ')') [BOOST_BIND_ACTION(push_cast_expr)];
 
-      data_type = (ncslit("int") | ncslit("float") | ncslit("string") |  ncslit("timestamp") | ncslit("bool") );
+      data_type = (S3SELECT_KW("int") | S3SELECT_KW("float") | S3SELECT_KW("string") |  S3SELECT_KW("timestamp") | S3SELECT_KW("bool") );
      
       substr = (substr_from) | (substr_from_for);
       
-      substr_from = (ncslit("substring") >> '(' >> (arithmetic_expression >> ncslit("from") >> arithmetic_expression) >> ')') [BOOST_BIND_ACTION(push_substr_from)];
+      substr_from = (S3SELECT_KW("substring") >> '(' >> (arithmetic_expression >> S3SELECT_KW("from") >> arithmetic_expression) >> ')') [BOOST_BIND_ACTION(push_substr_from)];
 
-      substr_from_for = (ncslit("substring") >> '(' >> (arithmetic_expression >> ncslit("from") >> arithmetic_expression >> ncslit("for") >> arithmetic_expression) >> ')') [BOOST_BIND_ACTION(push_substr_from_for)];
+      substr_from_for = (S3SELECT_KW("substring") >> '(' >> (arithmetic_expression >> S3SELECT_KW("from") >> arithmetic_expression >> S3SELECT_KW("for") >> arithmetic_expression) >> ')') [BOOST_BIND_ACTION(push_substr_from_for)];
       
       trim = (trim_whitespace_both) | (trim_one_side_whitespace) | (trim_anychar_anyside);
 
-      trim_one_side_whitespace = (ncslit("trim") >> '(' >> (trim_type)[BOOST_BIND_ACTION(push_trim_type)] >> arithmetic_expression >> ')') [BOOST_BIND_ACTION(push_trim_expr_one_side_whitespace)];
+      trim_one_side_whitespace = (S3SELECT_KW("trim") >> '(' >> (trim_type)[BOOST_BIND_ACTION(push_trim_type)] >> arithmetic_expression >> ')') [BOOST_BIND_ACTION(push_trim_expr_one_side_whitespace)];
 
-      trim_whitespace_both = (ncslit("trim") >> '(' >> arithmetic_expression >> ')') [BOOST_BIND_ACTION(push_trim_whitespace_both)];
+      trim_whitespace_both = (S3SELECT_KW("trim") >> '(' >> arithmetic_expression >> ')') [BOOST_BIND_ACTION(push_trim_whitespace_both)];
 
-      trim_anychar_anyside = (ncslit("trim") >> '(' >> ((trim_remove_type)[BOOST_BIND_ACTION(push_trim_type)] >> arithmetic_expression >> ncslit("from") >> arithmetic_expression)  >> ')') [BOOST_BIND_ACTION(push_trim_expr_anychar_anyside)];
+      trim_anychar_anyside = (S3SELECT_KW("trim") >> '(' >> ((trim_remove_type)[BOOST_BIND_ACTION(push_trim_type)] >> arithmetic_expression >> S3SELECT_KW("from") >> arithmetic_expression)  >> ')') [BOOST_BIND_ACTION(push_trim_expr_anychar_anyside)];
       
-      trim_type = ((ncslit("leading") >> ncslit("from")) | ( ncslit("trailing") >> ncslit("from")) | (ncslit("both") >> ncslit("from")) | ncslit("from") ); 
+      trim_type = ((S3SELECT_KW("leading") >> S3SELECT_KW("from")) | ( S3SELECT_KW("trailing") >> S3SELECT_KW("from")) | (S3SELECT_KW("both") >> S3SELECT_KW("from")) | S3SELECT_KW("from") ); 
 
-      trim_remove_type = (ncslit("leading") | ncslit("trailing") | ncslit("both") );
+      trim_remove_type = (S3SELECT_KW("leading") | S3SELECT_KW("trailing") | S3SELECT_KW("both") );
 
-      datediff = (ncslit("date_diff") >> '(' >> date_part >> ',' >> arithmetic_expression >> ',' >> arithmetic_expression >> ')') [BOOST_BIND_ACTION(push_datediff)];
+      datediff = (S3SELECT_KW("date_diff") >> '(' >> date_part >> ',' >> arithmetic_expression >> ',' >> arithmetic_expression >> ')') [BOOST_BIND_ACTION(push_datediff)];
 
-      dateadd = (ncslit("date_add") >> '(' >> date_part >> ',' >> arithmetic_expression >> ',' >> arithmetic_expression >> ')') [BOOST_BIND_ACTION(push_dateadd)];
+      dateadd = (S3SELECT_KW("date_add") >> '(' >> date_part >> ',' >> arithmetic_expression >> ',' >> arithmetic_expression >> ')') [BOOST_BIND_ACTION(push_dateadd)];
 
-      extract = (ncslit("extract") >> '(' >> (date_part_extract)[BOOST_BIND_ACTION(push_date_part)] >> ncslit("from") >> arithmetic_expression >> ')') [BOOST_BIND_ACTION(push_extract)];
+      extract = (S3SELECT_KW("extract") >> '(' >> (date_part_extract)[BOOST_BIND_ACTION(push_date_part)] >> S3SELECT_KW("from") >> arithmetic_expression >> ')') [BOOST_BIND_ACTION(push_extract)];
 
-      date_part = (ncslit("year") | ncslit("month") | ncslit("day") | ncslit("hour")  | ncslit("minute") | ncslit("second")) [BOOST_BIND_ACTION(push_date_part)];
+      date_part = (S3SELECT_KW("year") | S3SELECT_KW("month") | S3SELECT_KW("day") | S3SELECT_KW("hour")  | S3SELECT_KW("minute") | S3SELECT_KW("second")) [BOOST_BIND_ACTION(push_date_part)];
 
-      date_part_extract = ((date_part) |  ncslit("week") | ncslit("timezone_hour") | ncslit("timezone_minute"));
+      date_part_extract = ((date_part) |  S3SELECT_KW("week") | S3SELECT_KW("timezone_hour") | S3SELECT_KW("timezone_minute"));
 
-      time_to_string_constant = (ncslit("to_string") >> '(' >> arithmetic_expression >> ',' >> (string)[BOOST_BIND_ACTION(push_string)] >> ')') [BOOST_BIND_ACTION(push_time_to_string_constant)];
+      time_to_string_constant = (S3SELECT_KW("to_string") >> '(' >> arithmetic_expression >> ',' >> (string)[BOOST_BIND_ACTION(push_string)] >> ')') [BOOST_BIND_ACTION(push_time_to_string_constant)];
 
-      time_to_string_dynamic = (ncslit("to_string") >> '(' >> arithmetic_expression >> ',' >> arithmetic_expression >> ')') [BOOST_BIND_ACTION(push_time_to_string_dynamic)];
+      time_to_string_dynamic = (S3SELECT_KW("to_string") >> '(' >> arithmetic_expression >> ',' >> arithmetic_expression >> ')') [BOOST_BIND_ACTION(push_time_to_string_dynamic)];
 
       number = bsc::int_p;
 
@@ -719,11 +708,11 @@ public:
 
       arith_cmp = bsc::str_p(">=") | bsc::str_p("<=") | bsc::str_p("=") | bsc::str_p("<") | bsc::str_p(">") | bsc::str_p("!=");
 
-      and_op =  ncslit("and");
+      and_op =  S3SELECT_KW("and");
 
-      or_op =  ncslit("or");
+      or_op =  S3SELECT_KW("or");
 
-      variable_name =  bsc::lexeme_d[(+bsc::alpha_p >> *( bsc::alpha_p | bsc::digit_p | '_') ) -  ncslit("not")];
+      variable_name =  bsc::lexeme_d[(+bsc::alpha_p >> *( bsc::alpha_p | bsc::digit_p | '_') ) -  S3SELECT_KW("not")];
 
       variable = (variable_name >> "." >> variable_name) | variable_name;
     }
@@ -768,6 +757,13 @@ void push_from_clause::builder(s3select* self, const char* a, const char* b) con
     
     pos = token.rfind(' ');
     alias_name = token.substr(pos+1,token.size());
+
+    self->getAction()->table_alias = alias_name;
+
+    if(self->getAction()->column_prefix != "##" && self->getAction()->table_alias != self->getAction()->column_prefix)
+    {
+      throw base_s3select_exception(std::string("query can not contain more then a single table-alias"), base_s3select_exception::s3select_exp_en_t::FATAL);
+    }
 
     token = table_name;
   }
@@ -854,10 +850,19 @@ void push_variable::builder(s3select* self, const char* a, const char* b) const
   else
   {
     size_t pos = token.find('.');
+    std::string alias_name;
     if(pos != std::string::npos)
     {
+      alias_name = token.substr(0,pos);
       pos ++;
       token = token.substr(pos,token.size());
+
+      if(self->getAction()->column_prefix != "##" && alias_name != self->getAction()->column_prefix)
+      {
+        throw base_s3select_exception(std::string("query can not contain more then a single table-alias"), base_s3select_exception::s3select_exp_en_t::FATAL);
+      }
+
+      self->getAction()->column_prefix = alias_name;
     }
     v = S3SELECT_NEW(self, variable, token);
   }
@@ -1124,6 +1129,7 @@ void push_negation::builder(s3select* self, const char* a, const char* b) const
 void push_column_pos::builder(s3select* self, const char* a, const char* b) const
 {
   std::string token(a, b);
+  std::string alias_name;
   variable* v;
 
   if (token == "*" || token == "* ") //TODO space should skip in boost::spirit
@@ -1135,8 +1141,17 @@ void push_column_pos::builder(s3select* self, const char* a, const char* b) cons
     size_t pos = token.find('.');
     if(pos != std::string::npos)
     {
+      alias_name = token.substr(0,pos);
+
       pos ++;
       token = token.substr(pos,token.size());
+
+      if(self->getAction()->column_prefix != "##" && self->getAction()->column_prefix != alias_name)
+      {
+        throw base_s3select_exception(std::string("query can not contain more then a single table-alias"), base_s3select_exception::s3select_exp_en_t::FATAL);
+      }
+    
+      self->getAction()->column_prefix = alias_name;
     }
     v = S3SELECT_NEW(self, variable, token, variable::var_t::POS);
   }
