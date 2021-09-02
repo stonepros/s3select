@@ -473,9 +473,60 @@ int run_on_single_query(const char* fname, const char* query)
   return status;
 }
 
+int parallel_query_processing(int argc,char **argv)
+{
+//purpose: run parallel execution of single query.
+
+
+	char *query=0;
+	char *object_name=0;
+  uint32_t execution_scale=1;
+
+	for (int i = 0; i < argc; i++)
+	{
+
+		if (!strcmp(argv[i], "-key"))
+		{
+			object_name = argv[i + 1];
+			continue;
+		}
+
+		if (!strcmp(argv[i], "-q"))
+		{
+			query = argv[i + 1];
+			continue;
+		}
+
+		if (!strcmp(argv[i], "-p"))
+		{
+			execution_scale = atoi(argv[i + 1]);
+			continue;
+		}
+	}
+
+  if(!object_name)
+  {
+    std::cout << " object name is missing " << std::endl;
+  }
+
+  if(!query)
+  {
+    std::cout << " query is missing " << std::endl;
+  }
+
+  csv_parallel_execution csv_scaleup(object_name,query,execution_scale);
+
+  csv_scaleup.prepare();
+  csv_scaleup.run();
+
+  return 0;
+}
+
 int main(int argc,char **argv)
 {
 //purpose: run many queries (reside in file) on single file.
+
+  return parallel_query_processing(argc,argv);
 
 	char *query=0;
 	char *fname=0;
