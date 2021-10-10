@@ -27,8 +27,8 @@ jobs:
       run: | 
         sudo apt-get update
         sudo apt-get install -y -V ca-certificates lsb-release wget
-        curl -L https://dist.apache.org/repos/dist/dev/arrow/KEYS | apt-key add -
-        add-apt-repository "deb [arch=amd64] https://apache.jfrog.io/artifactory/arrow/ubuntu bionic main"
+        sudo curl -L https://dist.apache.org/repos/dist/dev/arrow/KEYS | apt-key add -
+        sudo add-apt-repository "deb [arch=amd64] https://apache.jfrog.io/artifactory/arrow/ubuntu bionic main"
         sudo apt-get update
         sudo apt-get install -y -V libarrow-dev
           
