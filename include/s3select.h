@@ -2193,6 +2193,11 @@ public:
         m_s3_select->get_filter()->extract_columns(m_where_clause_columns,object_reader->get_num_of_columns());
   }
 
+  std::string get_error_description()
+  {
+    return m_error_description;
+  }
+
   int run_s3select_on_object(std::string &result,
         std::function<int(std::string&)> fp_s3select_result_format,
         std::function<int(std::string&)> fp_s3select_header_format)
@@ -2370,7 +2375,7 @@ public:
         } while (next_rownum_status);
 
         if (next_rownum_status == false)
-          return -1;
+          return 1;
       }
       else
       {

@@ -327,10 +327,13 @@ int run_query_on_parquet_file(const char* input_query, const char* input_file)
       }
     }
 
-    std::cout << result << std::endl;
-
-    if (status < 0)
+    if(status<0)
+    {
+      std::cout << parquet_processor.get_error_description() << std::endl;
       break;
+    }
+
+    std::cout << result << std::endl;
 
   } while (0);
 
