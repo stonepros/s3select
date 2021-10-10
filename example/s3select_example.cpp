@@ -340,79 +340,6 @@ int run_query_on_parquet_file(const char* input_query, const char* input_file)
   return 0;
 }
 
-int run_on_localFile(char*  input_query);
-
-int main(int argc,char **argv)
-{
-//purpose:to run the engine on a single query.
-awsCli_handler awscli;
-
-  char *query=0;
-  char *fname=0;
-
-  bool using_key_flag = false;
-
-  for (int i = 0; i < argc; i++)
-  {
-
-    if (!strcmp(argv[i], "-key"))
-    {
-      fname = argv[i + 1];
-      using_key_flag = true;
-      continue;
-    }
-
-    if (!strcmp(argv[i], "-q"))
-    {
-      query = argv[i + 1];
-      continue;
-    }
-  }
-
-  if(using_key_flag == false)
-  {
-    return run_on_localFile(query);
-  }
-
-  FILE* fp  = fopen(fname, "r");
-  
-  if(!fp)
-  {
-    std::cout << " input stream is not valid, abort;" << std::endl;
-    return -1;
-  }
-
-  struct stat statbuf;
-  lstat(fname, &statbuf);
-  int status;
-
-  s3selectEngine::csv_object::csv_defintions csv;
-  csv.use_header_info = false;
-
-#define BUFFER_SIZE (1024 *1024  * 4) //simulate 4mb parts in s3-objects
-  char *buff = (char *)malloc(BUFFER_SIZE);
-  while (1)
-  {
-    size_t input_sz = fread(buff, 1, BUFFER_SIZE, fp);
-    status = awscli.run_s3select(query, buff, input_sz, statbuf.st_size);
-    if(status<0)
-    {
-      std::cout << "failure on execution " << std::endl;
-      break;
-    }
-    std::cout << awscli.get_result() << std::endl;
-
-    if(!input_sz || feof(fp))
-    {
-      break;
-    }
-  }
-
-  free(buff);
-  fclose(fp);
-  return status;
-}
-
 int run_on_localFile(char*  input_query)
 {
 
@@ -560,6 +487,7 @@ int run_on_single_query(const char* fname, const char* query)
   s3selectEngine::csv_object::csv_defintions csv;
   csv.use_header_info = false;
 
+#define BUFFER_SIZE (4*1024*1024)
   std::string buff(BUFFER_SIZE,0);
   while (1)
   {
