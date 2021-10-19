@@ -1878,18 +1878,20 @@ public:
   void result_values_to_string(multi_values& projections_resuls, std::string& result)
   {
     size_t i = 0;
+    std::string output_delimiter(1,m_csv_defintion.output_column_delimiter);
+
     for(auto res : projections_resuls.values)
     {
-            result.append( res->to_string() );
-
             if (m_csv_defintion.quote_fields_always) {
               std::ostringstream quoted_result;
-              quoted_result << std::quoted(result);
-              result = quoted_result.str();
-            }
+              quoted_result << std::quoted(res->to_string(),m_csv_defintion.quot_char, m_csv_defintion.escape_char);
+              result.append(quoted_result.str());
+            }//TODO to add asneeded
+	    else
+	    {
+            	result.append( res->to_string() );
+	    }
 
-            std::string output_delimiter(1,m_csv_defintion.output_column_delimiter);
-            
             if(!m_csv_defintion.redundant_column) {
               if(++i < projections_resuls.values.size()) {
                 result.append(output_delimiter);
