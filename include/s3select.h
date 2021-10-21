@@ -1884,7 +1884,7 @@ public:
     {
             if (m_csv_defintion.quote_fields_always) {
               std::ostringstream quoted_result;
-              quoted_result << std::quoted(res->to_string(),m_csv_defintion.quot_char, m_csv_defintion.escape_char);
+              quoted_result << std::quoted(res->to_string(),m_csv_defintion.output_quot_char, m_csv_defintion.escape_char);
               result.append(quoted_result.str());
             }//TODO to add asneeded
 	    else
