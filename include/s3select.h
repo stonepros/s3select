@@ -1135,6 +1135,10 @@ void push_column_pos::builder(s3select* self, const char* a, const char* b) cons
   if (token == "*" || token == "* ") //TODO space should skip in boost::spirit
   {
     v = S3SELECT_NEW(self, variable, token, variable::var_t::STAR_OPERATION);
+
+    //NOTE: variable may leak upon star-operation(multi_value object is not destruct entirly, it contain stl-vactor which is allocated on heap).
+    //TODO: find a generic way for such use-cases, one possible solution is to push all-nodes(upon AST is complete) into cleanup-container.
+    self->getS3F()->push_for_cleanup(v);
   }
   else
   {
