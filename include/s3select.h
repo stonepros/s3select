@@ -1292,6 +1292,9 @@ void push_like_predicate_no_escape::builder(s3select* self, const char* a, const
   variable* v = S3SELECT_NEW(self, variable, "\\",variable::var_t::COL_VALUE);
   func->push_argument(v);
   
+  // experimenting valgrind-issue happens only on teuthology
+  self->getS3F()->push_for_cleanup(v);
+  
   base_statement* like_expr = self->getAction()->exprQ.back();
   self->getAction()->exprQ.pop_back();
   func->push_argument(like_expr);  
