@@ -153,6 +153,7 @@ class s3select_allocator //s3select is the "owner"
 private:
 
   std::vector<char*> list_of_buff;
+  std::vector<char*> list_of_ptr;
   u_int32_t m_idx;
 
 #define __S3_ALLOCATION_BUFF__ (24*1024)
@@ -195,19 +196,38 @@ public:
     return &buff[ idx ];
   }
 
+  void push_for_delete(void *p)
+  {
+    list_of_ptr.push_back((char*)p);
+  }
+
   virtual ~s3select_allocator()
   {
     for(auto b : list_of_buff)
     {
       free(b);
     }
+
+    for(auto b : list_of_ptr)
+    {
+      delete(b);
+    }
   }
 };
 
 // placement new for allocation of all s3select objects on single(or few) buffers, deallocation of those objects is by releasing the buffer.
-#define S3SELECT_NEW(self, type , ... ) [=]() \
+#define S3SELECT_PLACEMENT_NEW(self, type , ... ) [=]() \
         {   \
             auto res=new (self->getAllocator()->alloc(sizeof(type))) type(__VA_ARGS__); \
+            return res; \
+        }();
+
+// no placement new; actually, its an oridinary new with additional functionality for deleting the AST nodes.
+// (this changes, is for verifying the valgrind report on leak)
+#define S3SELECT_NEW(self, type , ... ) [=]() \
+        {   \
+            auto res=new type(__VA_ARGS__); \
+	    self->getAllocator()->push_for_delete(res); \
             return res; \
         }();
 

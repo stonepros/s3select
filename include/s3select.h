@@ -84,7 +84,7 @@ struct actionQ
 
     if(t == x_map.end())
     {
-      auto v = new std::vector<const char*>;
+      auto v = new std::vector<const char*>;//TODO delete 
       x_map.insert(std::pair<const void*,std::vector<const char*> *>(th,v));
       v->push_back(a);
     }
@@ -1280,55 +1280,67 @@ void push_in_predicate::builder(s3select* self, const char* a, const char* b) co
 
   self->getAction()->inMainArg = 0;
 }
-
+#if 0
 void push_like_predicate_no_escape::builder(s3select* self, const char* a, const char* b) const
 {
-  std::string token(a, b);
-  std::string function_name("#like_no_escape_predicate#");
 
-  __function* func = S3SELECT_NEW(self, __function, function_name.c_str(), self->getS3F());
- 
-  //escape_value is the default escape character (replacing the missing escape expression)
-  //variable* escape_value = S3SELECT_NEW(self, variable, "\\",variable::var_t::COL_VALUE);
-  //func->push_argument(escape_value);
+  std::string token(a, b);
+  std::string in_function("#like_predicate#");
+
+  __function* func = S3SELECT_NEW(self, __function, in_function.c_str(), self->getS3F());
+  
+  variable* v = S3SELECT_NEW(self, variable, "\\",variable::var_t::COL_VALUE);
+  func->push_argument(v);
   
   // experimenting valgrind-issue happens only on teuthology
-  //self->getS3F()->push_for_cleanup(escape_value);
+  self->getS3F()->push_for_cleanup(v);
   
-  //like_expr contains the regular expression
   base_statement* like_expr = self->getAction()->exprQ.back();
   self->getAction()->exprQ.pop_back();
   func->push_argument(like_expr);  
 
-  //main_expr contains the matched-to expression 
-  base_statement* main_expr = self->getAction()->exprQ.back();
+  base_statement* expr = self->getAction()->exprQ.back();
   self->getAction()->exprQ.pop_back();
-  func->push_argument(main_expr);
+
+  func->push_argument(expr);
 
   self->getAction()->exprQ.push_back(func);
+}
+#endif
+
+void push_like_predicate_no_escape::builder(s3select* self, const char* a, const char* b) const
+{
+
+  std::string token(a, b);
+  std::string in_function("#like_predicate#");
+
+  variable* v = S3SELECT_NEW(self, variable, "\\",variable::var_t::COL_VALUE);
+
+  self->getAction()->exprQ.push_back(v);
+
+  g_push_like_predicate_escape.push_like_predicate_escape::builder(self,a,b);
+
 }
 
 void push_like_predicate_escape::builder(s3select* self, const char* a, const char* b) const
 {
   std::string token(a, b);
-  std::string function_name("#like_predicate#");
+  std::string in_function("#like_predicate#");
 
-  __function* func = S3SELECT_NEW(self, __function, function_name.c_str(), self->getS3F());
+  __function* func = S3SELECT_NEW(self, __function, in_function.c_str(), self->getS3F());
 
-  //escape expression
-  base_statement* escape_expr = self->getAction()->exprQ.back();
+  base_statement* expr = self->getAction()->exprQ.back();
   self->getAction()->exprQ.pop_back();
-  func->push_argument(escape_expr);
 
-  //like_expr contains the regular expression
-  base_statement* like_expr = self->getAction()->exprQ.back();
-  self->getAction()->exprQ.pop_back();
-  func->push_argument(like_expr);
+  func->push_argument(expr);
 
-  //main_expr contains the matched-to expression 
   base_statement* main_expr = self->getAction()->exprQ.back();
   self->getAction()->exprQ.pop_back();
   func->push_argument(main_expr);
+
+  base_statement* escape_expr = self->getAction()->exprQ.back();
+  self->getAction()->exprQ.pop_back();
+  func->push_argument(escape_expr);
 
   self->getAction()->exprQ.push_back(func);
 }
