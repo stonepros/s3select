@@ -1280,7 +1280,7 @@ void push_in_predicate::builder(s3select* self, const char* a, const char* b) co
 
   self->getAction()->inMainArg = 0;
 }
-#if 0
+
 void push_like_predicate_no_escape::builder(s3select* self, const char* a, const char* b) const
 {
 
@@ -1293,7 +1293,7 @@ void push_like_predicate_no_escape::builder(s3select* self, const char* a, const
   func->push_argument(v);
   
   // experimenting valgrind-issue happens only on teuthology
-  self->getS3F()->push_for_cleanup(v);
+  //self->getS3F()->push_for_cleanup(v);
   
   base_statement* like_expr = self->getAction()->exprQ.back();
   self->getAction()->exprQ.pop_back();
@@ -1305,21 +1305,6 @@ void push_like_predicate_no_escape::builder(s3select* self, const char* a, const
   func->push_argument(expr);
 
   self->getAction()->exprQ.push_back(func);
-}
-#endif
-
-void push_like_predicate_no_escape::builder(s3select* self, const char* a, const char* b) const
-{
-
-  std::string token(a, b);
-  std::string in_function("#like_predicate#");
-
-  variable* v = S3SELECT_NEW(self, variable, "\\",variable::var_t::COL_VALUE);
-
-  self->getAction()->exprQ.push_back(v);
-
-  g_push_like_predicate_escape.push_like_predicate_escape::builder(self,a,b);
-
 }
 
 void push_like_predicate_escape::builder(s3select* self, const char* a, const char* b) const

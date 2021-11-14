@@ -197,7 +197,7 @@ public:
   }
 
   void push_for_delete(void *p)
-  {
+  {//in case of using S3SELECT_NO_PLACEMENT_NEW
     list_of_ptr.push_back((char*)p);
   }
 
@@ -209,14 +209,14 @@ public:
     }
 
     for(auto b : list_of_ptr)
-    {
+    {//in case of using S3SELECT_NO_PLACEMENT_NEW
       delete(b);
     }
   }
 };
 
 // placement new for allocation of all s3select objects on single(or few) buffers, deallocation of those objects is by releasing the buffer.
-#define S3SELECT_PLACEMENT_NEW(self, type , ... ) [=]() \
+#define S3SELECT_NEW(self, type , ... ) [=]() \
         {   \
             auto res=new (self->getAllocator()->alloc(sizeof(type))) type(__VA_ARGS__); \
             return res; \
@@ -224,7 +224,7 @@ public:
 
 // no placement new; actually, its an oridinary new with additional functionality for deleting the AST nodes.
 // (this changes, is for verifying the valgrind report on leak)
-#define S3SELECT_NEW(self, type , ... ) [=]() \
+#define S3SELECT_NO_PLACEMENT_NEW(self, type , ... ) [=]() \
         {   \
             auto res=new type(__VA_ARGS__); \
 	    self->getAllocator()->push_for_delete(res); \
