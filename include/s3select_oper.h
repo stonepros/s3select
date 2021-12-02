@@ -1003,8 +1003,12 @@ public:
 
   scratch_area():m_upper_bound(-1),parquet_type(false),buff_loc(0)
   {
-    //TODO its a leak, to use s3select_new 
     m_schema_values = new std::vector<value>(128,value(""));
+  }
+
+  ~scratch_area()
+  {
+    delete m_schema_values;
   }
 
   void set_column_pos(const char* n, int pos)//TODO use std::string

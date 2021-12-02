@@ -498,6 +498,8 @@ std::string run_s3select(std::string expression,std::string input)
   s3select s3select_syntax;
   std::string parquet_input = input;
 
+  static int file_no = 1;
+
   int status = s3select_syntax.parse_query(expression.c_str());
 
   if(status)
@@ -511,7 +513,31 @@ std::string run_s3select(std::string expression,std::string input)
   csv_to_parquet(parquet_input);
   std::string parquet_result;
   run_query_on_parquet_file(expression.c_str(),PARQUET_FILENAME,parquet_result);
- 
+
+  if (strcmp(parquet_result.c_str(),s3select_result.c_str()))
+  {
+    std::cout << "failed on query " << expression << std::endl;
+
+    {
+      std::string buffer;
+
+      std::ifstream f(PARQUET_FILENAME);
+      f.seekg(0, std::ios::end);
+      buffer.resize(f.tellg());
+      f.seekg(0);
+      f.read(buffer.data(), buffer.size());
+
+      std::string fn = std::string("./parquet_copy") + std::to_string(file_no);      
+      std::ofstream fw(fn.c_str());
+      fw.write(buffer.data(), buffer.size());
+
+      fn = std::string("./csv_copy") + std::to_string(file_no++);      
+      std::ofstream fw2(fn.c_str());
+      fw2.write(parquet_input.data(), parquet_input.size());
+      
+    }
+  }
+
   parquet_csv_report_error(parquet_result,s3select_result);
 
   return s3select_result;
