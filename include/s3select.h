@@ -1936,6 +1936,9 @@ public:
               i->set_skip_non_aggregate(false);//projection column is set to be runnable
 
               projections_resuls.push_value( &(i->eval()) );
+              result.append( i->eval().to_string() );
+              if (i != m_projections.back())
+				result.append(",");
             }
 
           result_values_to_string(projections_resuls,result);
@@ -1988,6 +1991,9 @@ public:
       for (auto& i : m_projections)
       {
         projections_resuls.push_value( &(i->eval()) );
+        result.append( i->eval().to_string() );
+        if (i != m_projections.back()) 
+		    result.append(",");
       }
       result_values_to_string(projections_resuls,result);
       result.append(output_delimiter);
@@ -2314,7 +2320,8 @@ public:
             {
               i->set_last_call();
               result.append(i->eval().to_string());
-              result.append(",");
+              if(i != m_projections.back())
+		  result.append(",");
             }
           }
 
@@ -2391,7 +2398,8 @@ public:
       for (auto i : m_projections)
       {
         result.append(i->eval().to_string());
-        result.append(",");
+        if(i != m_projections.back())
+		      result.append(",");
       }
       result.append("\n");
 

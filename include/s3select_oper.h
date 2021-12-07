@@ -591,7 +591,8 @@ public:
       }
       else if (type == value_En_t::S3NULL)
       {
-        m_to_string.assign("null");
+        //m_to_string.assign("null");
+        m_to_string.assign("");
       }
     }
     else

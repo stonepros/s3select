@@ -303,7 +303,7 @@ int run_query_on_parquet_file(const char* input_query, const char* input_file)
   rgw.set_get_size_api(fp_get_size);
   rgw.set_range_req_api(fp_range_req);
   
-  std::function<int(std::string&)> fp_s3select_result_format = [](std::string& result){std::cout << result << std::endl;result.clear();return 0;};
+  std::function<int(std::string&)> fp_s3select_result_format = [](std::string& result){std::cout << result;result.clear();return 0;};
   std::function<int(std::string&)> fp_s3select_header_format = [](std::string& result){result="";return 0;};
 
   parquet_object parquet_processor(input_file,&s3select_syntax,&rgw);
