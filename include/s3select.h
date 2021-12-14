@@ -2319,6 +2319,7 @@ public:
             for (auto i : m_projections)
             {
               i->set_last_call();
+              i->set_skip_non_aggregate(false);//projection column is set to be runnable
               result.append(i->eval().to_string());
               if(i != m_projections.back())
 		  result.append(",");
