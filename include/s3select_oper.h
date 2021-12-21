@@ -417,9 +417,9 @@ public:
 private:
   value_t __val;
   //std::string m_to_string;
-  std::basic_string<char,std::char_traits<char>,ChunkAllocator<char,512>> m_to_string;
+  std::basic_string<char,std::char_traits<char>,ChunkAllocator<char,256>> m_to_string;
   //std::string m_str_value;
-  std::basic_string<char,std::char_traits<char>,ChunkAllocator<char,512>> m_str_value;
+  std::basic_string<char,std::char_traits<char>,ChunkAllocator<char,256>> m_str_value;
 
 public:
   enum class value_En_t
@@ -1504,6 +1504,7 @@ public:
     return var_value.type;
   }
 
+
   value& star_operation()   //purpose return content of all columns in a input stream
   {
 
@@ -1519,22 +1520,17 @@ public:
 
     for(size_t i=0; i<num_of_columns; i++)
     {
-      std::string_view col_value = m_scratch->get_column_value(i);
-      size_t len = col_value.size();
+      size_t len = m_scratch->get_column_value(i).size();
       if((pos+len)>sizeof(m_star_op_result_charc))
       {
         throw base_s3select_exception("result line too long", base_s3select_exception::s3select_exp_en_t::FATAL);
       }
-
 
       memcpy(&m_star_op_result_charc[pos], m_scratch->get_column_value(i).data(), len);//TODO using string_view will avoid copy
       m_star_op_result_charc[ pos + len ] = 0;
 
       star_operation_values[i] = &m_star_op_result_charc[pos];//set string value
       var_value.multiple_values.push_value( &star_operation_values[i] );
-
-
-      memcpy(&m_star_op_result_charc[pos], col_value.data(), len);
 
       pos += len;
       pos ++;

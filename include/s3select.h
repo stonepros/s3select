@@ -1757,7 +1757,7 @@ public:
     bool quote_fields_asneeded;
     bool redundant_column;
 
-    csv_defintions():row_delimiter('\n'), column_delimiter(','), output_row_delimiter('\n'), output_column_delimiter(','), escape_char('\\'), output_escape_char('\\'), output_quot_char('"'), quot_char('"'), use_header_info(false), ignore_header_info(false), quote_fields_always(false), quote_fields_asneeded(false), redundant_column(true) {}
+    csv_defintions():row_delimiter('\n'), column_delimiter(','), output_row_delimiter('\n'), output_column_delimiter(','), escape_char('\\'), output_escape_char('\\'), output_quot_char('"'), quot_char('"'), use_header_info(false), ignore_header_info(false), quote_fields_always(false), quote_fields_asneeded(false), redundant_column(false) {}
 
   } m_csv_defintion;
 
@@ -1936,9 +1936,6 @@ public:
               i->set_skip_non_aggregate(false);//projection column is set to be runnable
 
               projections_resuls.push_value( &(i->eval()) );
-              result.append( i->eval().to_string() );
-              if (i != m_projections.back())
-				result.append(",");
             }
 
           result_values_to_string(projections_resuls,result);
@@ -1991,9 +1988,6 @@ public:
       for (auto& i : m_projections)
       {
         projections_resuls.push_value( &(i->eval()) );
-        result.append( i->eval().to_string() );
-        if (i != m_projections.back()) 
-		    result.append(",");
       }
       result_values_to_string(projections_resuls,result);
       result.append(output_delimiter);

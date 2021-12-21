@@ -426,14 +426,15 @@ std::string run_s3select(std::string expression)
   s3_csv_object.run_s3select_on_object(s3select_result, in.c_str(), in.size(), false, false, true);
 
   s3select_result = s3select_result.substr(0, s3select_result.find_first_of(","));
+  s3select_result = s3select_result.substr(0, s3select_result.find_first_of("\n"));//remove last \n
 
   csv_to_parquet(csv_obj);
   run_query_on_parquet_file(expression.c_str(),PARQUET_FILENAME,parquet_result);
   parquet_result = parquet_result.substr(0, parquet_result.find_first_of(","));
+  parquet_result = parquet_result.substr(0, parquet_result.find_first_of("\n"));//remove last \n
 
   parquet_csv_report_error(parquet_result,s3select_result);
 
-  s3select_result = s3select_result.substr(0, s3select_result.find_first_of("\n"));//remove last \n
 
   return s3select_result;
 }
@@ -509,6 +510,7 @@ std::string run_s3select(std::string expression,std::string input)
 
   std::string s3select_result;
   s3selectEngine::csv_object  s3_csv_object(&s3select_syntax);
+  s3_csv_object.m_csv_defintion.redundant_column = false;
 
   s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), false, false, true);
 
@@ -1317,7 +1319,8 @@ void test_single_column_single_row(const char* input_query,const char* expected_
     csv_to_parquet(input);
     std::string parquet_result;
     run_query_on_parquet_file(input_query,PARQUET_FILENAME,parquet_result);
-    
+   
+    s3_csv_object.m_csv_defintion.redundant_column = false; 
     status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(),
         false, // dont skip first line
         false, // dont skip last line
