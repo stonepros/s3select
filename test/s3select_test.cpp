@@ -397,11 +397,12 @@ std::string string_to_quot(std::string& s, char quot = '"')
     if(std::stringstream(temp_str) >> temp_int) {
       std::stringstream s1;
       s1 << temp_int;
-      result +=  quot + s1.str() +  quot + ","  + "\n";
+      result +=  quot + s1.str() +  quot + "\n";
     }
     temp_str = "";
   }
   return result;
+}
 
 void parquet_csv_report_error(std::string a, std::string b)
 {
@@ -450,6 +451,7 @@ void run_s3select_test_opserialization(std::string expression,std::string input,
 
     std::string s3select_result;
     csv_object::csv_defintions csv;
+    csv.redundant_column = false;
 
     csv.output_row_delimiter = *row_delimiter;
     csv.output_column_delimiter = *column_delimiter;
@@ -486,6 +488,7 @@ std::string run_s3select_opserialization_quot(std::string expression,std::string
     std::string s3select_result;
     csv_object::csv_defintions csv;
 
+    csv.redundant_column = false;
     csv.quote_fields_always = quot_always;
     csv.output_quot_char = quot_char;
 
