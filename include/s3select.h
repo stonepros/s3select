@@ -2168,6 +2168,23 @@ private:
   std::vector<parquet_file_parser::parquet_value_t> m_projections_values;
 
 public:
+
+  void result_values_to_string(multi_values& projections_resuls, std::string& result)
+  {
+    size_t i = 0;
+
+    for(auto res : projections_resuls.values)
+    {
+      std::ostringstream quoted_result;
+      //quoted_result << std::quoted(res->to_string(),'"','\\');
+      quoted_result << res->to_string();
+      if(++i < projections_resuls.values.size()) {
+      quoted_result << ',';
+      }
+      result.append(quoted_result.str());
+    }
+  }
+
   parquet_object(std::string parquet_file_name, s3select *s3_query,s3selectEngine::rgw_s3select_api* rgw) : base_s3object(s3_query->get_scratch_area())
   {
     try{
@@ -2301,6 +2318,7 @@ public:
     // run where (if exist) in-case its true --> parquet-reader(projections-column-positions ,&row-values)
 
     bool next_rownum_status = true;
+    multi_values projections_resuls;
 
     if (m_aggr_flow == true)
     {
@@ -2314,10 +2332,9 @@ public:
             {
               i->set_last_call();
               i->set_skip_non_aggregate(false);//projection column is set to be runnable
-              result.append(i->eval().to_string());
-              if(i != m_projections.back())
-		  result.append(",");
+              projections_resuls.push_value( &(i->eval()) );
             }
+	    result_values_to_string(projections_resuls,result);
           }
 
           return 0;
@@ -2392,11 +2409,10 @@ public:
 
       for (auto i : m_projections)
       {
-        result.append(i->eval().to_string());
-        if(i != m_projections.back())
-		      result.append(",");
+	projections_resuls.push_value( &(i->eval()) );
       }
-      result.append("\n");
+      result_values_to_string(projections_resuls,result);
+      result.append("\n");//TODO not generic 
 
       object_reader->increase_rownum();
 
