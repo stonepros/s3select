@@ -481,11 +481,16 @@ int run_on_single_query(const char* fname, const char* query)
 	exit(-1);
   }
 
+
+  if (is_parquet_file(fname))
+  {
+    std::string result;
+    int status = run_query_on_parquet_file(query, fname);
+    return status;
+  }
+
   int status;
   auto file_sz = boost::filesystem::file_size(fname);
-
-  s3selectEngine::csv_object::csv_defintions csv;
-  csv.use_header_info = false;
 
 #define BUFFER_SIZE (4*1024*1024)
   std::string buff(BUFFER_SIZE,0);

@@ -270,7 +270,6 @@ class OSFile : public ObjectInterface {
     RETURN_NOT_OK(internal::ValidateRange(position, nbytes));
     // ReadAt() leaves the file position undefined, so require that we seek
     // before calling Read() or Write().
-    std::cout << "ReadAt " << position << " " << nbytes << std::endl;
     need_seeking_.store(true);
     return ::arrow::internal::FileReadAt(fd_, reinterpret_cast<uint8_t*>(out), position,
                                          nbytes);
@@ -558,6 +557,15 @@ namespace ceph {
 
 class ReadableFile::ReadableFileImpl : public ObjectInterface {
  public:
+ 
+  ~ReadableFileImpl()
+  {
+    if(IMPL != nullptr)
+    {
+      delete IMPL;
+    }
+  }
+
 #ifdef CEPH_USE_FS
   explicit ReadableFileImpl(MemoryPool* pool) :  pool_(pool) {IMPL=new OSFile();}
 #endif
@@ -1549,6 +1557,14 @@ private:
     load_meta_data();
   }
 
+  ~parquet_file_parser()
+  {
+    for(auto r : m_column_readers)
+    {
+      delete r;
+    }
+  }
+
   int load_meta_data()
   {
     m_parquet_reader = parquet::ceph::ParquetFileReader::OpenFile(m_parquet_file_name,m_rgw_s3select_api,false);
@@ -1884,7 +1900,6 @@ private:
   int column_reader_wrap::Read(const uint64_t rownum,parquet_value_t & value)
   {
     int64_t values_read = 0;
-    int64_t rows_read = 0;
 
     if (m_rownum < (int64_t)rownum)
     { //should skip
@@ -1914,7 +1929,7 @@ private:
         }
       } //end-while
 
-      rows_read = ReadBatch(1, nullptr, nullptr, &m_last_value, &values_read);
+      ReadBatch(1, nullptr, nullptr, &m_last_value, &values_read);
       m_read_last_value = true;
       m_rownum++;
       value = m_last_value;
@@ -1923,16 +1938,13 @@ private:
     {
       if (m_read_last_value == false)
       {
-        rows_read = ReadBatch(1, nullptr, nullptr, &m_last_value, &values_read);
+        ReadBatch(1, nullptr, nullptr, &m_last_value, &values_read);
         m_read_last_value = true;
         m_rownum++;
       }
 
       value = m_last_value;
     }
-
-    //TODO rows_read == 1?
-    //TODO values_read == 1?
 
     return 0;
   }

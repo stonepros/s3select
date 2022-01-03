@@ -2,6 +2,8 @@
 #define __S3SELECT__
 #define BOOST_SPIRIT_THREADSAFE
 
+#pragma once
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS
 #include <boost/spirit/include/classic_core.hpp>
 #include <boost/algorithm/string.hpp>
 #include <iostream>
@@ -486,7 +488,6 @@ public:
 
       if (!info.full)
       {
-        std::cout << "failure -->" << query_parse_position << "<---" << std::endl;
         error_description = std::string("failure -->") + query_parse_position + std::string("<---");
         return -1;
       }
@@ -1874,6 +1875,17 @@ public:
     m_aggr_flow = m_s3_select->is_aggregate_query();
   }
 
+  void set_csv_query(s3select* s3_query,struct csv_defintions csv)
+  {
+    if(m_s3_select != nullptr) 
+    {
+      return;
+    }
+
+    set(s3_query);
+    m_csv_defintion = csv;
+    csv_parser.set(m_csv_defintion.row_delimiter, m_csv_defintion.column_delimiter, m_csv_defintion.quot_char, m_csv_defintion.escape_char);
+  }
 
   std::string get_error_description()
   {
@@ -2179,13 +2191,13 @@ public:
       //quoted_result << std::quoted(res->to_string(),'"','\\');
       quoted_result << res->to_string();
       if(++i < projections_resuls.values.size()) {
-      quoted_result << ',';
+      quoted_result << ',';//TODO to use output serialization?
       }
       result.append(quoted_result.str());
     }
   }
 
-  parquet_object(std::string parquet_file_name, s3select *s3_query,s3selectEngine::rgw_s3select_api* rgw) : base_s3object(s3_query->get_scratch_area())
+  parquet_object(std::string parquet_file_name, s3select *s3_query,s3selectEngine::rgw_s3select_api* rgw) : base_s3object(s3_query->get_scratch_area()),object_reader(nullptr)
   {
     try{
     
@@ -2210,10 +2222,55 @@ public:
         m_s3_select->get_filter()->extract_columns(m_where_clause_columns,object_reader->get_num_of_columns());
   }
 
+  parquet_object() : base_s3object(nullptr),object_reader(nullptr)
+  {}
+
+  ~parquet_object()
+  {
+    if(object_reader != nullptr)
+    {
+      delete object_reader;
+    }
+
+  }
+
   std::string get_error_description()
   {
     return m_error_description;
   }
+
+  bool is_set()
+  {
+    return m_s3_select != nullptr; 
+  }
+
+  void set_parquet_object(std::string parquet_file_name, s3select *s3_query,s3selectEngine::rgw_s3select_api* rgw) //TODO duplicate code
+  {
+    try{
+    
+      object_reader = new parquet_file_parser(parquet_file_name,rgw); //TODO uniq ptr
+    } catch(std::exception &e)
+    { 
+      throw base_s3select_exception(std::string("failure while processing parquet meta-data ") + std::string(e.what()) ,base_s3select_exception::s3select_exp_en_t::FATAL);
+    }
+
+    set(s3_query);
+
+    m_sa = s3_query->get_scratch_area();
+    
+    s3_query->get_scratch_area()->set_parquet_type();
+
+    load_meta_data_into_scratch_area();
+
+    for(auto x : m_s3_select->get_projections_list())
+    {
+        x->extract_columns(m_projections_columns,object_reader->get_num_of_columns());
+    }
+
+    if(m_s3_select->get_filter())
+        m_s3_select->get_filter()->extract_columns(m_where_clause_columns,object_reader->get_num_of_columns());
+  }
+  
 
   int run_s3select_on_object(std::string &result,
         std::function<int(std::string&)> fp_s3select_result_format,

@@ -541,7 +541,6 @@ struct _fn_sum : public base_function
     }
     catch (base_s3select_exception& e)
     {
-      std::cout << "illegal value for aggregation(sum). skipping." << std::endl;
       if (e.severity() == base_s3select_exception::s3select_exp_en_t::FATAL)
       {
         throw;
