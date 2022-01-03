@@ -2222,7 +2222,7 @@ public:
         m_s3_select->get_filter()->extract_columns(m_where_clause_columns,object_reader->get_num_of_columns());
   }
 
-  parquet_object() : base_s3object(nullptr),object_reader(nullptr)
+  parquet_object() : base_s3object(nullptr),m_s3_select(nullptr),object_reader(nullptr)
   {}
 
   ~parquet_object()
