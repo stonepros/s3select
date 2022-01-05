@@ -21,6 +21,8 @@ using namespace s3selectEngine;
 #include <iostream>
 #include <memory>
 
+#ifdef _ARROW_EXIST
+
 #include <arrow/io/file.h>
 #include <arrow/util/logging.h>
 
@@ -33,6 +35,7 @@ using parquet::Type;
 using parquet::schema::GroupNode;
 using parquet::schema::PrimitiveNode;
 
+#endif
 
 constexpr int NUM_ROWS = 100000;
 constexpr int64_t ROW_GROUP_SIZE = 1024 * 1024;  
@@ -71,6 +74,8 @@ class tokenize {
     return last_token == true;
   }
 };
+
+#ifdef _ARROW_EXIST
 
 static std::shared_ptr<GroupNode> column_string_2(uint32_t num_of_columns) {
 
@@ -266,7 +271,12 @@ int run_query_on_parquet_file(const char* input_query, const char* input_file, s
 
   return 0;
 }// ============================================================ //
-
+#else
+int run_query_on_parquet_file(const char* input_query, const char* input_file, std::string &result)
+{	
+  return 0;
+}
+#endif //_ARROW_EXIST
 
 
 std::string run_expression_in_C_prog(const char* expression)
@@ -406,7 +416,11 @@ std::string string_to_quot(std::string& s, char quot = '"')
 
 void parquet_csv_report_error(std::string a, std::string b)
 {
+#ifdef _ARROW_EXIST
   ASSERT_EQ(a,b);
+#else
+  ASSERT_EQ(0,0);
+#endif
 }
 
 std::string run_s3select(std::string expression)
@@ -429,13 +443,14 @@ std::string run_s3select(std::string expression)
   s3select_result = s3select_result.substr(0, s3select_result.find_first_of(","));
   s3select_result = s3select_result.substr(0, s3select_result.find_first_of("\n"));//remove last \n
 
+#ifdef _ARROW_EXIST
   csv_to_parquet(csv_obj);
   run_query_on_parquet_file(expression.c_str(),PARQUET_FILENAME,parquet_result);
   parquet_result = parquet_result.substr(0, parquet_result.find_first_of(","));
   parquet_result = parquet_result.substr(0, parquet_result.find_first_of("\n"));//remove last \n
 
   parquet_csv_report_error(parquet_result,s3select_result);
-
+#endif 
 
   return s3select_result;
 }
@@ -504,7 +519,6 @@ std::string run_s3select(std::string expression,std::string input)
   s3select s3select_syntax;
   std::string parquet_input = input;
 
-  static int file_no = 1;
 
   int status = s3select_syntax.parse_query(expression.c_str());
 
@@ -517,6 +531,8 @@ std::string run_s3select(std::string expression,std::string input)
 
   s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), false, false, true);
 
+#ifdef _ARROW_EXIST
+  static int file_no = 1;
   csv_to_parquet(parquet_input);
   std::string parquet_result;
   run_query_on_parquet_file(expression.c_str(),PARQUET_FILENAME,parquet_result);
@@ -546,6 +562,7 @@ std::string run_s3select(std::string expression,std::string input)
   }
 
   parquet_csv_report_error(parquet_result,s3select_result);
+#endif //_ARROW_EXIST
 
   return s3select_result;
 }
@@ -1319,10 +1336,12 @@ void test_single_column_single_row(const char* input_query,const char* expected_
     size_t size = 1;
     generate_csv(input, size);
 
+#ifdef _ARROW_EXIST
     csv_to_parquet(input);
     std::string parquet_result;
     run_query_on_parquet_file(input_query,PARQUET_FILENAME,parquet_result);
-   
+#endif
+
     s3_csv_object.m_csv_defintion.redundant_column = false; 
     status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(),
         false, // dont skip first line
@@ -1341,7 +1360,9 @@ void test_single_column_single_row(const char* input_query,const char* expected_
     }
 
     ASSERT_EQ(status, 0);
+#ifdef _ARROW_EXIST
     parquet_csv_report_error(parquet_result,s3select_result);
+#endif
     ASSERT_EQ(s3select_result, std::string(expected_result));
 }
 

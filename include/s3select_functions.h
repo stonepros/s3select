@@ -2642,6 +2642,7 @@ bool base_statement::mark_aggreagtion_subtree_to_execute()
   return true;
 }
 
+#ifdef _ARROW_EXIST
 void base_statement::extract_columns(parquet_file_parser::column_pos_t &cols,const uint16_t max_columns)
 {// purpose: to extract all column-ids from query
   if(is_column()) //column reference or column position
@@ -2698,6 +2699,7 @@ void base_statement::extract_columns(parquet_file_parser::column_pos_t &cols,con
   if(right())
     right()->extract_columns(cols,max_columns);
 }
+#endif //_ARROW_EXIST
 
 } //namespace s3selectEngine
 

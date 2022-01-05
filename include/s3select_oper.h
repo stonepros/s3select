@@ -1100,6 +1100,7 @@ public:
     buff_loc=0;
   }
 
+#ifdef _ARROW_EXIST
   int update(std::vector<parquet_file_parser::parquet_value_t> &parquet_row_value, parquet_file_parser::column_pos_t &column_positions)
   {
     //TODO no need for copy , possible to save referece (its save last row for calculation)
@@ -1152,6 +1153,7 @@ public:
     }
     return 0;
   }
+#endif // _ARROW_EXIST
 
 };
 
@@ -1269,8 +1271,9 @@ public:
   bool is_column_reference() const;
   bool mark_aggreagtion_subtree_to_execute();
 
-
+#ifdef _ARROW_EXIST
   void extract_columns(parquet_file_parser::column_pos_t &cols,const uint16_t max_columns);
+#endif  
 
   virtual void set_last_call()
   {

@@ -1,6 +1,12 @@
 
 #pragma once
 
+#if ! __has_include (<arrow/api.h>) || ! __has_include (<arrow/io/api.h>) || !__has_include (<parquet/arrow/reader.h>)
+# undef _ARROW_EXIST 
+#endif
+
+#ifdef _ARROW_EXIST
+
 #include <iostream>
 #include <arrow/api.h>
 #include <arrow/io/api.h>
@@ -1949,4 +1955,5 @@ private:
     return 0;
   }
 
+#endif
 

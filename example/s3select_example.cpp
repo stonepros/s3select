@@ -264,6 +264,7 @@ bool is_parquet_file(const char * fn)
     return false;
 }
 
+#ifdef _ARROW_EXIST
 int run_query_on_parquet_file(const char* input_query, const char* input_file)
 {
   int status;
@@ -339,6 +340,13 @@ int run_query_on_parquet_file(const char* input_query, const char* input_file)
 
   return 0;
 }
+#else
+int run_query_on_parquet_file(const char* input_query, const char* input_file)
+{
+  std::cout << "arrow is not installed" << std::endl;
+  return 0;
+}
+#endif //_ARROW_EXIST
 
 int run_on_localFile(char*  input_query)
 {

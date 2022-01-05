@@ -2162,6 +2162,7 @@ public:
   }
 };
 
+#ifdef _ARROW_EXIST
 class parquet_object : public base_s3object
 {
 
@@ -2482,6 +2483,7 @@ public:
     return 1; //1>0
   }
 };
+#endif //_ARROW_EXIST
 
 }; // namespace s3selectEngine
 
