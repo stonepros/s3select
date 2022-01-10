@@ -10,6 +10,7 @@
 #include <cstring>
 #include <cmath>
 
+#include <re2/re2.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/bind.hpp>
@@ -2523,6 +2524,309 @@ class base_timestamp_to_string : public base_function
         temp++;
       }
       return res;
+    }
+
+};
+
+class base_like : public base_function
+{
+  protected:
+    value like_expr_val;
+    value escape_expr_val;
+    bool constant_state = false;
+    std::unique_ptr<RE2> compiled_regex;
+
+  public:
+    void param_validation(base_statement* escape_expr, base_statement* like_expr)
+    {
+      escape_expr_val = escape_expr->eval();
+      if (escape_expr_val.type != value::value_En_t::STRING)
+      {
+        throw base_s3select_exception("esacpe expression must be string");
+      }
+
+      like_expr_val = like_expr->eval();
+      if (like_expr_val.type != value::value_En_t::STRING)
+      {
+        throw base_s3select_exception("like expression must be string");
+      }
+    }
+
+    std::vector<char> transform(const char* s, char escape)
+    {
+      enum  state_expr_t {START, ESCAPE, START_STAR_CHAR, START_METACHAR, START_ANYCHAR, METACHAR,
+              STAR_CHAR, ANYCHAR, END };
+      state_expr_t st{START};
+
+      const char *p = s;
+      size_t size = strlen(s);
+      size_t i = 0;
+      std::vector<char> v;
+
+      while(*p)
+      {
+        switch (st)
+        {
+          case START:
+            if (*p == escape)
+            {
+              st = ESCAPE;
+              v.push_back('^');
+            }
+            else if (*p == '%')
+            {
+              v.push_back('^');
+              v.push_back('.');
+              v.push_back('*');
+              st = START_STAR_CHAR;
+            }
+            else if (*p == '_')
+            {
+              v.push_back('^');
+              v.push_back('.');
+              st=START_METACHAR;
+            }
+            else
+            {
+              v.push_back('^');
+              v.push_back(*p);
+              st=START_ANYCHAR;
+            }
+            break;
+
+          case START_STAR_CHAR:
+            if (*p == escape)
+            {
+              st = ESCAPE;
+            }
+            else if (*p == '%')
+            {
+              st = START_STAR_CHAR;
+            }
+            else if (*p == '_')
+            {
+              v.push_back('.');
+              st = METACHAR;
+            }
+            else
+            {
+              v.push_back(*p);
+              st = ANYCHAR;
+            }
+            break;
+
+          case START_METACHAR:
+            if (*p == escape)
+            {
+              st = ESCAPE;
+            }
+            else if(*p == '_')
+            {
+              v.push_back('.');
+              st = METACHAR;
+            }
+            else if(*p == '%')
+            {
+              v.push_back('.');
+              v.push_back('*');
+              st = STAR_CHAR;
+            }
+            else
+            {
+              v.push_back(*p);
+              st = ANYCHAR;
+            }
+            break;
+
+          case START_ANYCHAR:
+            if (*p == escape)
+            {
+              st = ESCAPE;
+            }
+            else if (*p == '_' && i == size-1)
+            {
+              v.push_back('.');
+              v.push_back('$');
+              st = END;
+            }
+            else if (*p == '_')
+            {
+              v.push_back('.');
+              st = METACHAR;
+            }
+            else if (*p == '%' && i == size-1)
+            {
+              v.push_back('.');
+              v.push_back('*');
+              v.push_back('$');
+              st = END;
+            }
+            else if (*p == '%')
+            {
+              v.push_back('.');
+              v.push_back('*');
+              st = STAR_CHAR;
+            }
+            else if (i == size-1)
+            {
+              v.push_back(*p);
+              v.push_back('$');
+              st = END;
+            }
+            else
+            {
+              v.push_back(*p);
+              st = ANYCHAR;
+            }
+            break;
+
+          case METACHAR:
+            if (*p == escape)
+            {
+              st = ESCAPE;
+            }
+            else if (*p == '_' && i == size-1)
+            {
+              v.push_back('.');
+              v.push_back('$');
+              st = END;
+            }
+            else if (*p == '_')
+            {
+              v.push_back('.');
+              st = METACHAR;
+            }
+            else if (*p == '%' && i == size-1)
+            {
+              v.push_back('.');
+              v.push_back('*');
+              v.push_back('$');
+              st = END;
+            }
+            else if (*p == '%')
+            {
+              v.push_back('.');
+              v.push_back('*');
+              st = STAR_CHAR;
+            }
+            else if (i == size-1)
+            {
+              v.push_back(*p);
+              v.push_back('$');
+              st = END;
+            }
+            else
+            {
+              v.push_back(*p);
+              st = ANYCHAR;
+            }
+            break;
+
+          case ANYCHAR:
+            if (*p == escape)
+            {
+              st = ESCAPE;
+            }
+            else if (*p == '_' && i == size-1)
+            {
+              v.push_back('.');
+              v.push_back('$');
+              st = END;
+            }
+            else if (*p == '_')
+            {
+              v.push_back('.');
+              st = METACHAR;
+            }
+            else if (*p == '%' && i == size-1)
+            {
+              v.push_back('.');
+              v.push_back('*');
+              v.push_back('$');
+              st = END;
+            }
+            else if (*p == '%')
+            {
+              v.push_back('.');
+              v.push_back('*');
+              st = STAR_CHAR;
+            }
+            else if (i == size-1)
+            {
+              v.push_back(*p);
+              v.push_back('$');
+              st = END;
+            }
+            else
+            {
+              v.push_back(*p);
+              st = ANYCHAR;
+            }
+            break;
+
+          case STAR_CHAR:
+            if (*p == escape)
+            {
+              st = ESCAPE;
+            }
+            else if (*p == '%' && i == size-1)
+            {
+              v.push_back('$');
+              st = END;
+            }
+            else if (*p == '%')
+            {
+              st = STAR_CHAR;
+            }
+            else if (*p == '_' && i == size-1)
+            {
+              v.push_back('.');
+              v.push_back('$');
+              st = END;
+            }
+            else if (*p == '_')
+            {
+              v.push_back('.');
+              st = METACHAR;
+            }
+            else if (i == size-1)
+            {
+              v.push_back(*p);
+              v.push_back('$');
+              st = END;
+            }
+            else
+            {
+              v.push_back(*p);
+              st = ANYCHAR;
+            }
+            break;
+
+          case ESCAPE:
+            if (i == size-1)
+            {
+              v.push_back(*p);
+              v.push_back('$');
+              st = END;
+            }
+            else
+            {
+              v.push_back(*p);
+              st = ANYCHAR;
+            }
+            break;
+
+          case END:
+            return v;
+
+          default:
+            throw base_s3select_exception("missing state!");
+            break;
+        }
+        p++;
+        i++;
+      }
+      return v;
     }
 
 };
