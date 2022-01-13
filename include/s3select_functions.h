@@ -1540,7 +1540,11 @@ struct _fn_like : public base_like
 
       std::vector<char> like_as_regex = transform(like_expr_val.str(), *escape_expr_val.str());
       std::string like_as_regex_str(like_as_regex.begin(), like_as_regex.end());
+#ifdef _RE2
       compiled_regex = std::make_unique<RE2>(like_as_regex_str);
+#else
+      compiled_regex = std::make_unique<std::regex>(like_as_regex_str);
+#endif
     }
   }
 
@@ -1560,7 +1564,12 @@ struct _fn_like : public base_like
 
       std::vector<char> like_as_regex = transform(like_expr_val.str(), *escape_expr_val.str());
       std::string like_as_regex_str(like_as_regex.begin(), like_as_regex.end());
+#ifdef _RE2
       compiled_regex = std::make_unique<RE2>(like_as_regex_str);
+#else
+      compiled_regex = std::make_unique<std::regex>(like_as_regex_str);
+#endif
+
     }
 
     value main_expr_val = main_expr->eval();
@@ -1572,7 +1581,12 @@ struct _fn_like : public base_like
     std::string content = main_expr_val.to_string();
     re2::StringPiece res[1];
 
+#ifdef _RE2
     if (compiled_regex->Match(content, 0, content.size(), RE2::ANCHOR_BOTH, res, 1)) {
+#else
+     if ( std::regex_match(main_expr_val.to_string(), *compiled_regex.get())) {
+#endif
+
       result->set_value(true);
     } else {
       result->set_value(false);

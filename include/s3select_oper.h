@@ -11,6 +11,8 @@
 #include <cmath>
 
 #include <re2/re2.h>
+#include <regex>
+
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/bind.hpp>
@@ -157,7 +159,7 @@ private:
   std::vector<char*> list_of_ptr;
   u_int32_t m_idx;
 
-#define __S3_ALLOCATION_BUFF__ (24*1024)
+#define __S3_ALLOCATION_BUFF__ (64*1024)
   void check_capacity(size_t sz)
   {
     if (sz>__S3_ALLOCATION_BUFF__)
@@ -469,9 +471,9 @@ public:
 private:
   value_t __val;
   //std::string m_to_string;
-  std::basic_string<char,std::char_traits<char>,ChunkAllocator<char,256>> m_to_string;
+  std::basic_string<char,std::char_traits<char>,ChunkAllocator<char,1024>> m_to_string;
   //std::string m_str_value;
-  std::basic_string<char,std::char_traits<char>,ChunkAllocator<char,256>> m_str_value;
+  std::basic_string<char,std::char_traits<char>,ChunkAllocator<char,1024>> m_str_value;
 
 public:
   enum class value_En_t
@@ -2534,7 +2536,11 @@ class base_like : public base_function
     value like_expr_val;
     value escape_expr_val;
     bool constant_state = false;
+#ifdef _RE2
     std::unique_ptr<RE2> compiled_regex;
+#else
+    std::unique_ptr<std::regex> compiled_regex;
+#endif
 
   public:
     void param_validation(base_statement* escape_expr, base_statement* like_expr)
