@@ -991,7 +991,7 @@ class scratch_area
 {
 
 private:
-  std::vector<char*> m_columns{128};
+  std::vector<std::string_view> m_columns{128};//TODO not correct
   std::vector<value> *m_schema_values; //values got a type
   int m_upper_bound;
 
@@ -1062,7 +1062,7 @@ public:
         throw base_s3select_exception("column_position_is_wrong", base_s3select_exception::s3select_exp_en_t::ERROR);
       }
       
-      v = m_columns[ column_pos ];
+      v = m_columns[ column_pos ].data();
     }
     else
     {
@@ -1072,7 +1072,7 @@ public:
   }
 
 
-  char* get_column_value(int column_pos)//TODO reuse it
+  std::string_view get_column_value(int column_pos)//TODO reuse it
   {
     if ((column_pos >= m_upper_bound) || column_pos < 0)
     {
@@ -1085,7 +1085,7 @@ public:
      }
      else
      {
-       return  const_cast<char*>( (*m_schema_values)[ column_pos ].to_string() );
+       return  (*m_schema_values)[ column_pos ].to_string();
      }
   }
 
@@ -1523,15 +1523,13 @@ public:
 
     for(size_t i=0; i<num_of_columns; i++)
     {
-      // TODO is it possible to replace that with string_view, i.e upon parsing column to set its size,
-      // thus strlen/string-size is compute only once 
-      size_t len = strlen( m_scratch->get_column_value(i) );
+      size_t len = m_scratch->get_column_value(i).size();
       if((pos+len)>sizeof(m_star_op_result_charc))
       {
         throw base_s3select_exception("result line too long", base_s3select_exception::s3select_exp_en_t::FATAL);
       }
 
-      memcpy(&m_star_op_result_charc[pos], m_scratch->get_column_value(i), len);//TODO no need to copy
+      memcpy(&m_star_op_result_charc[pos], m_scratch->get_column_value(i).data(), len);//TODO using string_view will avoid copy
       m_star_op_result_charc[ pos + len ] = 0;
 
       star_operation_values[i] = &m_star_op_result_charc[pos];//set string value

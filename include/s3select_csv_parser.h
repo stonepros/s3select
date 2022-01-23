@@ -325,10 +325,11 @@ class csvParser
   char m_column_delimiter;
   char m_quote_char;
   char m_escape_char;
+  size_t m_token_capcity;
 
 public:
 
-  csvParser(char rd='\n', char cd=',', char quot='"', char ec='\\'):m_row_delimeter(rd), m_column_delimiter(cd), m_quote_char(quot), m_escape_char(ec) {};
+  csvParser(char rd='\n', char cd=',', char quot='"', char ec='\\'):m_row_delimeter(rd), m_column_delimiter(cd), m_quote_char(quot), m_escape_char(ec),m_token_capcity(0) {};
 
   void set(char row_delimiter, char column_delimiter, char quot_char, char escape_char)
   {
@@ -344,6 +345,11 @@ public:
 
     // needed to start the highest-level SM. This will call on_entry and mark the start of the SM
     p.start();
+    
+    if(m_token_capcity == 0)
+    {
+      m_token_capcity = tk->capacity();
+    }
 
     //TODO for better performance to use template specialization (\n  \ , ")
     do
@@ -378,7 +384,8 @@ public:
         p.process_event(event_not_column_sep());
       }
 
-      if (p.tokens->capacity() <= p.token_idx)
+      //if (p.tokens->capacity() <= p.token_idx)
+      if (m_token_capcity <= p.token_idx)
       {
         return -1;
       }
