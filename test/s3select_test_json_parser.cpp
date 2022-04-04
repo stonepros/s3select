@@ -1,23 +1,57 @@
-#include <iostream>
-#include "rapidjson/reader.h"
-#include "rapidjson/writer.h"
-#include "rapidjson/filereadstream.h"
-#include "rapidjson/filewritestream.h"
-#include "rapidjson/error/en.h"
-#include "rapidjson/document.h"
-#include "rapidjson/pointer.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/memorystream.h"
-
 #include "s3select_json_parser.h"
+#include "rapidjson/document.h"
 #include <gtest/gtest.h>
 #include <cassert>
 #include <sstream>
 #include <fstream>
 #include <vector>
-#include <unordered_map>
 #include <filesystem>
 #include <iostream>
+
+
+// ===== base64 encode/decode
+
+typedef unsigned char uchar;
+static const std::string b = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";//=
+static std::string base64_encode(const std::string &in) {
+    std::string out;
+
+    int val=0, valb=-6;
+    for (uchar c : in) {
+        val = (val<<8) + c;
+        valb += 8;
+        while (valb>=0) {
+            out.push_back(b[(val>>valb)&0x3F]);
+            valb-=6;
+        }
+    }
+    if (valb>-6) out.push_back(b[((val<<8)>>(valb+8))&0x3F]);
+    while (out.size()%4) out.push_back('=');
+    return out;
+}
+
+
+static std::string base64_decode(const std::string &in) {
+
+    std::string out;
+
+    std::vector<int> T(256,-1);
+    for (int i=0; i<64; i++) T[b[i]] = i;
+
+    int val=0, valb=-8;
+    for (uchar c : in) {
+        if (T[c] == -1) break;
+        val = (val<<6) + T[c];
+        valb += 6;
+        if (valb>=0) {
+            out.push_back(char((val>>valb)&0xFF));
+            valb-=8;
+        }
+    }
+    return out;
+}
+
+//=============================================
 
 class dom_traverse_v2
 {
@@ -32,7 +66,6 @@ class dom_traverse_v2
 void dom_traverse_v2::print(const rapidjson::Value &v, std::string key_name)
 {
 	ss << key_name << " : ";
-
 	if(v.IsString())
 	{
 		ss << v.GetString() << std::endl;
@@ -40,7 +73,7 @@ void dom_traverse_v2::print(const rapidjson::Value &v, std::string key_name)
 	else
 		if(v.IsInt())
 		{
-			ss << v.GetInt() << std::endl;
+				ss << v.GetInt() << std::endl;
 		}
 		else
 			if(v.IsBool())
@@ -61,6 +94,7 @@ void dom_traverse_v2::print(const rapidjson::Value &v, std::string key_name)
 					{
 						ss << "value not exist" << std::endl;
 					}
+
 }
 
 void dom_traverse_v2::traverse(rapidjson::Document &d)
@@ -196,7 +230,7 @@ int RGW_send_data(const char* object_name, std::string & result)
 {//purpose: simulate RGW streaming an object into s3select
 
 	std::ifstream input_file_stream;
-	MyHandler handler;
+	JsonParserHandler handler;
 	size_t buff_sz{1024*1024*4};
 	char* buff = (char*)malloc(buff_sz);
 
@@ -213,13 +247,13 @@ int RGW_send_data(const char* object_name, std::string & result)
 	while(read_size)
 	{
 		//the handler is processing any buffer size
-		int status = handler.process_rgw_buffer(buff, read_size);
+		int status = handler.process_json_buffer(buff, read_size);
 		if(status<0) return -1;
 
 		//read next chunk
 		read_size = input_file_stream.readsome(buff, buff_sz);
 	}
-	handler.process_rgw_buffer(0, 0, true);
+	handler.process_json_buffer(0, 0, true);
 
 	result = handler.get_full_result();
 	return 0;
@@ -244,11 +278,97 @@ int test_compare(int argc, char* argv[])
 	return 0;
 }
 
-int main(int argc,char **argv)
-{
-	std::string res;
-	RGW_send_data(argv[1],res);
 
+#define TEST2 \
+"ewoicm93IiA6IFsKCXsKCQkiY29sb3IiOiAicmVkIiwKCQkidmFsdWUiOiAiI2YwMCIKCX0sCgl7\
+CgkJImNvbG9yIjogImdyZWVuIiwKCQkidmFsdWUiOiAiIzBmMCIKCX0sCgl7CgkJImNvbG9yIjog\
+ImJsdWUiLAoJCSJ2YWx1ZSI6ICIjMDBmIgoJfSwKCXsKCQkiY29sb3IiOiAiY3lhbiIsCgkJInZh\
+bHVlIjogIiMwZmYiCgl9LAoJewoJCSJjb2xvciI6ICJtYWdlbnRhIiwKCQkidmFsdWUiOiAiI2Yw\
+ZiIKCX0sCgl7CgkJImNvbG9yIjogInllbGxvdyIsCgkJInZhbHVlIjogIiNmZjAiCgl9LAoJewoJ\
+CSJjb2xvciI6ICJibGFjayIsCgkJInZhbHVlIjogIiMwMDAiCgl9Cl0KfQo="
+
+#define TEST3 \
+"ewogICJoZWxsbyI6ICJ3b3JsZCIsCiAgICAidCI6ICJ0cnVlIiAsCiAgICAiZiI6ICJmYWxzZSIs\
+CiAgICAibiI6ICJudWxsIiwKICAgICJpIjogMTIzLAogICAgInBpIjogMy4xNDE2LAoKICAgICJu\
+ZXN0ZWRfb2JqIiA6IHsKICAgICAgImhlbGxvMiI6ICJ3b3JsZCIsCiAgICAgICJ0MiI6IHRydWUs\
+CiAgICAgICJuZXN0ZWQyIiA6IHsKICAgICAgICAiYzEiIDogImMxX3ZhbHVlIiAsCiAgICAgICAg\
+ImFycmF5X25lc3RlZDIiOiBbMTAsIDIwLCAzMCwgNDBdCiAgICAgIH0sCiAgICAgICJuZXN0ZWQz\
+IiA6ewogICAgICAgICJoZWxsbzMiOiAid29ybGQiLAogICAgICAgICJ0MiI6IHRydWUsCiAgICAg\
+ICAgIm5lc3RlZDQiIDogewogICAgICAgICAgImMxIiA6ICJjMV92YWx1ZSIgLAogICAgICAgICAg\
+ImFycmF5X25lc3RlZDMiOiBbMTAwLCAyMDAsIDMwMCwgNDAwXQogICAgICAgIH0KICAgICAgfQog\
+ICAgfSwKICAgICJhcnJheV8xIjogWzEsIDIsIDMsIDRdCn0K"
+
+#define TEST4 \
+"ewoKICAgICJnbG9zc2FyeSI6IHsKICAgICAgICAidGl0bGUiOiAiZXhhbXBsZSBnbG9zc2FyeSIs\
+CgkJIkdsb3NzRGl2IjogewogICAgICAgICAgICAidGl0bGUiOiAiUyIsCgkJCSJHbG9zc0xpc3Qi\
+OiB7CiAgICAgICAgICAgICAgICAiR2xvc3NFbnRyeSI6IHsKICAgICAgICAgICAgICAgICAgICAi\
+SUQiOiAiU0dNTCIsCgkJCQkJIlNvcnRBcyI6ICJTR01MIiwKCQkJCQkiR2xvc3NUZXJtIjogIlN0\
+YW5kYXJkIEdlbmVyYWxpemVkIE1hcmt1cCBMYW5ndWFnZSIsCgkJCQkJIkFjcm9ueW0iOiAiU0dN\
+TCIsCgkJCQkJIkFiYnJldiI6ICJJU08gODg3OToxOTg2IiwKCQkJCQkiR2xvc3NEZWYiOiB7CiAg\
+ICAgICAgICAgICAgICAgICAgICAgICJwYXJhIjogIkEgbWV0YS1tYXJrdXAgbGFuZ3VhZ2UsIHVz\
+ZWQgdG8gY3JlYXRlIG1hcmt1cCBsYW5ndWFnZXMgc3VjaCBhcyBEb2NCb29rLiIsCgkJCQkJCSJH\
+bG9zc1NlZUFsc28iOiBbIkdNTCIsICJYTUwiXQogICAgICAgICAgICAgICAgICAgIH0sCgkJCQkJ\
+Ikdsb3NzU2VlIjogIm1hcmt1cCIKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfQogICAg\
+ICAgIH0KICAgIH0KfQoK"
+
+std::string run_sax(const char * in)
+{
+	JsonParserHandler handler;
+
+	int status = handler.process_json_buffer(base64_decode(std::string(in)).data(), strlen(in));
+
+	if(status==0)
+	{
+		return handler.get_full_result();	
+	}
+
+	return std::string("failure-sax");
+}
+
+std::string run_dom(const char * in)
+{
+	rapidjson::Document document;
+	document.Parse( base64_decode(std::string(in)).data() );
+
+	if (document.HasParseError()) {
+		std::cout<<"parsing error-dom"<< std::endl;
+		return std::string("parsing error");
+	}
+
+	if (!document.IsObject())
+	{
+		std::cout << " input is not an object dom" << std::endl;
+		return std::string("object error");
+	}
+
+	dom_traverse_v2 td2;
+	td2.traverse( document );
+	return std::string( (td2.ss).str() );
+}
+
+int compare_results(const char *in)
+{
+	std::cout << "===" << std::endl << base64_decode(std::string(in)) << std::endl;
+
+	std::string dom_res = run_dom(in);
+	std::string sax_res = run_sax(in);
+
+	auto res = dom_res.compare(sax_res);
+
+	std::cout << "dom = sax compare is :" << res << std::endl;
+	std::cout << "key-value:\n\n" << sax_res << std::endl;
+
+	return res;
+}
+
+TEST(TestS3selectJsonParser, sax_vs_dom)
+{// the dom parser result is compared against sax parser result
+	ASSERT_EQ( compare_results(TEST2) ,0);
+	ASSERT_EQ( compare_results(TEST3) ,0);
+	ASSERT_EQ( compare_results(TEST4) ,0);
+
+	//std::string res;
+	//RGW_send_data(argv[1],res);
 	//std::cout << res; 
 }
 
