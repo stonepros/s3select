@@ -1,5 +1,5 @@
-#ifndef SAX_H
-#define SAX_H
+#ifndef S3SELECT_JSON_PARSER_H
+#define S3SELECT_JSON_PARSER_H
 
 #include "rapidjson/reader.h"
 #include "rapidjson/writer.h"
@@ -8,12 +8,11 @@
 #include "rapidjson/error/en.h"
 #include <cassert>
 #include <sstream>
-#include <fstream>
 #include <vector>
-
+#include <iostream>
 
 class Valuesax {
-
+//TODO replace with s3select::value
   public:
 
     enum Type {
@@ -124,6 +123,7 @@ class ChunksStreamer : public rapidjson::MemoryStream {
 
     ChunksStreamer(const Ch *src, size_t size) : rapidjson::MemoryStream(src,size){next_src_=0;next_size_=0;}
 
+    //override Peek methode
     Ch Peek() //const 
     {
       if(RAPIDJSON_UNLIKELY(src_ == end_))
@@ -144,6 +144,7 @@ class ChunksStreamer : public rapidjson::MemoryStream {
       return *src_;
     }
 
+    //override Take method
     Ch Take() 
     {
       if(RAPIDJSON_UNLIKELY(src_ == end_))
@@ -203,7 +204,7 @@ class ChunksStreamer : public rapidjson::MemoryStream {
 
 };
 
-class MyHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>, MyHandler> {
+class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>, JsonParserHandler> {
 
   public:
 
@@ -211,22 +212,22 @@ class MyHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>, MyHandl
 
   public:
 
-    std::vector < std::pair < std::string, Valuesax>> mymap;
+    std::vector <std::pair < std::string, Valuesax>> key_value_store;
     Valuesax value;
     ChunksStreamer stream_buffer;
     bool init_buffer_stream;
     rapidjson::Reader reader;
     std::vector<en_json_elm_state_t> json_element_state;
-    std::string m_result;
-    std::vector<std::string> gs_key_stack;
+    std::string m_result;//debug purpose
+    std::vector<std::string> key_path;
 
-    MyHandler() : init_buffer_stream(false)
+    JsonParserHandler() : init_buffer_stream(false)
     {}
 
     std::string get_key_path()
     {//for debug
 	std::string res;
-	for(const auto & i: gs_key_stack)
+	for(const auto & i: key_path)
 	{
 	  res.append(i);
 	  res.append(std::string("/"));
@@ -234,26 +235,26 @@ class MyHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>, MyHandl
 	return res;
     }
 
-    void emptyhandler() {
-      mymap.clear();
+    void clear_keyValue_store() {
+      key_value_store.clear();
     }
 
-    std::vector < std::pair < std::string, Valuesax>> get_mykeyvalue() {
-      return mymap;
+    std::vector < std::pair < std::string, Valuesax>> get_keyValue_store() {
+      return key_value_store;
     }
 
     void dec_key_path()
     {
       if(json_element_state.back() != ARRAY_STATE)
 	{
-	  if(gs_key_stack.size() != 0)
-	    gs_key_stack.pop_back();
+	  if(key_path.size() != 0)
+	    key_path.pop_back();
 	}
     }
 
-    void push_new_key_value(Valuesax& v)//TODO should be reference
+    void push_new_key_value(Valuesax& v)
     {
-      mymap.push_back(std::make_pair(get_key_path(), v));
+      key_value_store.push_back(std::make_pair(get_key_path(), v));
       dec_key_path();
     }
 
@@ -293,7 +294,7 @@ class MyHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>, MyHandl
     }
 
     bool Key(const char* str, rapidjson::SizeType length, bool copy) {
-      gs_key_stack.push_back(std::string(str));
+      key_path.push_back(std::string(str));
       return true;
     }
 
@@ -324,74 +325,80 @@ class MyHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>, MyHandl
       return m_result;
     }
 
-    int process_rgw_buffer(char* rgw_buffer,size_t rgw_buffer_sz, bool end_of_stream=false)
-    {//RGW keeps calling with buffers, this method is not aware of object size
+    void debug_print_out()
+    {
+	    std::stringstream result;
 
-      std::stringstream result;
+	    //IterativeParseNext returns per each parsing completion(on lexical level)
+	    result.str("");
+	    for (const auto& i : this->get_keyValue_store()) {
+		    // debug purpose only 
 
-      if(!init_buffer_stream)
-      {
-	//set the memoryStreamer
-	reader.IterativeParseInit();
-	init_buffer_stream = true;
-      }
+		    // pushing the key-value into s3select object. that s3seelct-object should filter according to from-clause and projection defintions
+		    // this object could remain empty (no key-value matches the search-pattern)
+		    switch(i.second.type()) {
+			    case Valuesax::Decimal: result << i.first << " : " << i.second.asInt() << "\n"; break;
+			    case Valuesax::Double: result << i.first << " : " << i.second.asDouble() << "\n"; break;
+			    case Valuesax::String: result << i.first << " : " << i.second.asString() << "\n"; break;
+			    case Valuesax::Bool: result << i.first << " : " << std::boolalpha << i.second.asBool() << "\n"; break;
+			    case Valuesax::Null: result << i.first << " : " << "null" << "\n"; break;
+			    default: break;
+		    }
+	    }
 
-      //the non-processed bytes plus the next chunk are copy into main processing buffer 
-      if(!end_of_stream)
-	stream_buffer.resetBuffer(rgw_buffer, rgw_buffer_sz);
+	    //print result (actually its calling to s3select for processing. the s3slect-object may contain zero matching key-values)
+	    if(result.str().size())
+	    {
+		    //std::cout << result.str();// << std::endl;
+		    m_result.append(result.str());
+	    }
+    }
 
-      while (!reader.IterativeParseComplete()) {
-	reader.IterativeParseNext<rapidjson::kParseDefaultFlags>(stream_buffer, *this);
+    int process_json_buffer(char* json_buffer,size_t json_buffer_sz, bool end_of_stream=false)
+    {//user keeps calling with buffers, the method is not aware of the object size.
 
-	//IterativeParseNext returns per each parsing completion(on lexical level)
-	result.str("");
-	for (const auto& i : this->get_mykeyvalue()) {
-	//debug purpose only 
-	
-	  /// pushing the key-value into s3select object. that s3seelct-object should filter according to from-clause and projection defintions
-	  //  this object could remain empty (no key-value matches the search-pattern)
-	  switch(i.second.type()) {
-	    case Valuesax::Decimal: result << i.first << " : " << i.second.asInt() << "\n"; break;
-	    case Valuesax::Double: result << i.first << " : " << i.second.asDouble() << "\n"; break;
-	    case Valuesax::String: result << i.first << " : " << i.second.asString() << "\n"; break;
-	    case Valuesax::Bool: result << i.first << " : " << std::boolalpha << i.second.asBool() << "\n"; break;
-	    case Valuesax::Null: result << i.first << " : " << "null" << "\n"; break;
-	    default: break;
-	  }
-	}
+	    if(!init_buffer_stream)
+	    {
+		    //set the memoryStreamer
+		    reader.IterativeParseInit();
+		    init_buffer_stream = true;
+	    }
 
-	//print result (actually its calling to s3select for processing. the s3slect-object may contain zero matching key-values)
-	if(result.str().size())
-	{
-	    //std::cout << result.str();// << std::endl;
-	   // m_result.append(result.str());
-	}
+	    //the non-processed bytes plus the next chunk are copy into main processing buffer 
+	    if(!end_of_stream)
+		    stream_buffer.resetBuffer(json_buffer, json_buffer_sz);
 
-	//once all key-values move into s3select(for further filtering and processing), it should be cleared
-	this->emptyhandler();
+	    while (!reader.IterativeParseComplete()) {
+		    reader.IterativeParseNext<rapidjson::kParseDefaultFlags>(stream_buffer, *this);
 
-	if (!end_of_stream && stream_buffer.next_src_==0 && stream_buffer.getBytesLeft() < 100)//TODO this condition could be replaced. it also define the amount of data that should be copy
-	{//the non processed bytes will be processed on next fetched chunk
-	  //TODO save remaining-bytes to internal buffer (or caller will use 2 sets of buffer)
-	  stream_buffer.saveRemainingBytes();
-	  return 0;
-	}
+		    debug_print_out();
 
-	// error message
-	if(reader.HasParseError())  {
-	  rapidjson::ParseErrorCode c = reader.GetParseErrorCode();
-	  size_t o = reader.GetErrorOffset();
-	  std::cout << "PARSE ERROR " << c << " " << o << std::endl;
-	  return -1;	  
-	}
-      }//while reader.IterativeParseComplete
+		    //once all key-values move into s3select(for further filtering and processing), it should be cleared
+		    this->clear_keyValue_store();
 
-      return 0;
+		    //TODO this condition could be replaced. it also define the amount of data that would be copy per each chunk
+		    if (!end_of_stream && stream_buffer.next_src_==0 && stream_buffer.getBytesLeft() < 100)
+		    {//the non processed bytes will be processed on next fetched chunk
+		     //TODO save remaining-bytes to internal buffer (or caller will use 2 sets of buffer)
+			    stream_buffer.saveRemainingBytes();
+			    return 0;
+		    }
+
+		    // error message
+		    if(reader.HasParseError())  {
+			    rapidjson::ParseErrorCode c = reader.GetParseErrorCode();
+			    size_t o = reader.GetErrorOffset();
+			    std::cout << "PARSE ERROR " << c << " " << o << std::endl;
+			    return -1;	  
+		    }
+	    }//while reader.IterativeParseComplete
+
+	    return 0;
     }
 
     std::string& get_full_result()
     {
-      return m_result;
+	    return m_result;
     }  
 
 };
