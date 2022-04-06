@@ -17,7 +17,6 @@ bool s3select_json_parse_error(const char* error);
 #include <vector>
 #include <iostream>
 #include <functional>
-//#include "s3select.h"
 #include <boost/spirit/include/classic_core.hpp>
 #include "s3select_oper.h"//class value
 #include <boost/algorithm/string/predicate.hpp>
