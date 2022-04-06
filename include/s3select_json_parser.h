@@ -386,7 +386,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     bool StartArray() {
       json_element_state.push_back(ARRAY_STATE);
       if (prefix_match && from_clause.size() && (key_path[key_path.size() - 1] == from_clause[from_clause.size() - 1])) {
-          state = row_state::ARRAY;
+         state = row_state::ARRAY;
         }
       return true;
     }
