@@ -613,7 +613,11 @@ public:
       from_expression = (s3_object >> (variable - S3SELECT_KW("where"))) | s3_object;
 
       //the stdin and object_path are for debug purposes(not part of the specs)
-      s3_object = S3SELECT_KW("stdin") | S3SELECT_KW("s3object") | object_path ;
+      s3_object = json_s3_object | S3SELECT_KW("stdin") | S3SELECT_KW("s3object") | object_path;
+
+      json_s3_object = (S3SELECT_KW("s3object[*]")) >> *(bsc::str_p(".") >> json_path_element);
+
+      json_path_element = bsc::lexeme_d[+( bsc::alnum_p | bsc::str_p("_")) ];
 
       object_path = "/" >> *( fs_type >> "/") >> fs_type;
 
@@ -734,7 +738,7 @@ public:
     bsc::rule<ScannerT> datediff, dateadd, extract, date_part, date_part_extract, time_to_string_constant, time_to_string_dynamic;
     bsc::rule<ScannerT> special_predicates, between_predicate, not_between, in_predicate, like_predicate, like_predicate_escape, like_predicate_no_escape, is_null, is_not_null;
     bsc::rule<ScannerT> muldiv_operator, addsubop_operator, function, arithmetic_expression, addsub_operand, list_of_function_arguments, arithmetic_argument, mulldiv_operand;
-    bsc::rule<ScannerT> fs_type, object_path;
+    bsc::rule<ScannerT> fs_type, object_path,json_s3_object,json_path_element;
     bsc::rule<ScannerT> projections, projection_expression, alias_name, column_pos,column_pos_name;
     bsc::rule<ScannerT> when_case_else_projection, when_case_value_when, when_stmt, when_value_then;
     bsc::rule<ScannerT> logical_and,and_op,or_op;
