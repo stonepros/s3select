@@ -5,7 +5,7 @@ add_executable(s3select_perf_test s3select_perf_test.cpp)
 target_include_directories(s3select_perf_test PUBLIC ../include)
 
 add_executable(s3select_test_json_parser s3select_test_json_parser.cpp)
-target_include_directories(s3select_test_json_parser PUBLIC ../include/rapidjson/include ../include)
+target_include_directories(s3select_test_json_parser PUBLIC ../rapidjson/include/ ../include)
 
 find_package(Arrow QUIET)
 
