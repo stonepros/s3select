@@ -1542,7 +1542,7 @@ struct _fn_like : public base_like
   explicit _fn_like(base_statement* esc, base_statement* like_expr)
   {
     auto is_constant = [&](base_statement* bs) {
-      if (dynamic_cast<variable*>(bs) && dynamic_cast<variable*>(bs)->m_var_type == variable::var_t::COL_VALUE) {
+      if (dynamic_cast<variable*>(bs) && dynamic_cast<variable*>(bs)->m_var_type == variable::var_t::COLUMN_VALUE) {
         return true;
       } else {
         return false;
@@ -2445,7 +2445,7 @@ void base_statement::extract_columns(parquet_file_parser::column_pos_t &cols,con
 {// purpose: to extract all column-ids from query
   if(is_column()) //column reference or column position
   {variable* v = dynamic_cast<variable*>(this);
-    if(dynamic_cast<variable*>(this)->m_var_type == variable::var_t::VAR)
+    if(dynamic_cast<variable*>(this)->m_var_type == variable::var_t::VARIABLE_NAME)
     {//column reference 
 
       if (v->getScratchArea()->get_column_pos(v->get_name().c_str())>=0)
