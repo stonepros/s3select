@@ -1377,8 +1377,8 @@ public:
   enum class var_t
   {
     NA,
-    VAR,//schema column (i.e. age , price , ...)
-    COL_VALUE, //concrete value
+    VARIABLE_NAME,//schema column (i.e. age , price , ...)
+    COLUMN_VALUE, //concrete value (string,number,boolean)
     POS, // CSV column number  (i.e. _1 , _2 ... )
     STAR_OPERATION, //'*'
   } ;
@@ -1399,13 +1399,13 @@ private:
 public:
   variable():m_var_type(var_t::NA), _name(""), column_pos(-1) {}
 
-  explicit variable(int64_t i) : m_var_type(var_t::COL_VALUE), column_pos(-1), var_value(i) {}
+  explicit variable(int64_t i) : m_var_type(var_t::COLUMN_VALUE), column_pos(-1), var_value(i) {}
 
-  explicit variable(double d) : m_var_type(var_t::COL_VALUE), _name("#"), column_pos(-1), var_value(d) {}
+  explicit variable(double d) : m_var_type(var_t::COLUMN_VALUE), _name("#"), column_pos(-1), var_value(d) {}
 
-  explicit variable(int i) : m_var_type(var_t::COL_VALUE), column_pos(-1), var_value(i) {}
+  explicit variable(int i) : m_var_type(var_t::COLUMN_VALUE), column_pos(-1), var_value(i) {}
 
-  explicit variable(const std::string& n) : m_var_type(var_t::VAR), _name(n), column_pos(-1) {}
+  explicit variable(const std::string& n) : m_var_type(var_t::VARIABLE_NAME), _name(n), column_pos(-1) {}
 
   variable(const std::string& n,  var_t tp) : m_var_type(var_t::NA)
   {
@@ -1416,7 +1416,7 @@ public:
       int pos = atoi( n.c_str() + 1 ); //TODO >0 < (schema definition , semantic analysis)
       column_pos = pos -1;// _1 is the first column ( zero position )
     }
-    else if (tp == variable::var_t::COL_VALUE)
+    else if (tp == variable::var_t::COLUMN_VALUE)
     {
       _name = "#";
       m_var_type = tp;
@@ -1435,25 +1435,25 @@ public:
   {
     if (reserve_word == s3select_reserved_word::reserve_word_en_t::S3S_NULL)
     {
-      m_var_type = variable::var_t::COL_VALUE;
+      m_var_type = variable::var_t::COLUMN_VALUE;
       column_pos = undefined_column_pos;
       var_value.type = value::value_En_t::S3NULL;//TODO use set_null
     }
     else if (reserve_word == s3select_reserved_word::reserve_word_en_t::S3S_NAN)
     {
-      m_var_type = variable::var_t::COL_VALUE;
+      m_var_type = variable::var_t::COLUMN_VALUE;
       column_pos = undefined_column_pos;
       var_value.set_nan();
     }
     else if (reserve_word == s3select_reserved_word::reserve_word_en_t::S3S_TRUE)
     {
-      m_var_type = variable::var_t::COL_VALUE;
+      m_var_type = variable::var_t::COLUMN_VALUE;
       column_pos = -1;
       var_value.set_true();
     }
     else if (reserve_word == s3select_reserved_word::reserve_word_en_t::S3S_FALSE)
     {
-      m_var_type = variable::var_t::COL_VALUE;
+      m_var_type = variable::var_t::COLUMN_VALUE;
       column_pos = -1;
       var_value.set_false();
     }
@@ -1505,7 +1505,7 @@ public:
 
   virtual bool is_column() const //is reference to column.
   {
-    if(m_var_type == var_t::VAR || m_var_type == var_t::POS || m_var_type == var_t::STAR_OPERATION)
+    if(m_var_type == var_t::VARIABLE_NAME || m_var_type == var_t::POS || m_var_type == var_t::STAR_OPERATION)
     {
       return true;
     }
@@ -1566,7 +1566,7 @@ public:
 
   virtual value& eval_internal()
   {
-    if (m_var_type == var_t::COL_VALUE)
+    if (m_var_type == var_t::COLUMN_VALUE)
     {
       return var_value;  // a literal,could be deciml / float / string
     }

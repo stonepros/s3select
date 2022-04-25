@@ -61,6 +61,7 @@ struct actionQ
   std::vector<base_statement*> caseValueQ;
   projection_alias alias_map;
   std::string from_clause;
+  std::string json_from_clause;
   std::string column_prefix;
   std::string table_alias;
   s3select_projections  projections;
@@ -123,6 +124,12 @@ struct push_from_clause : public base_ast_builder
 };
 static push_from_clause g_push_from_clause;
 
+struct push_json_from_clause : public base_ast_builder
+{
+  void builder(s3select* self, const char* a, const char* b) const;
+};
+static push_json_from_clause g_push_json_from_clause;
+
 struct push_number : public base_ast_builder
 {
   void builder(s3select* self, const char* a, const char* b) const;
@@ -146,6 +153,12 @@ struct push_variable : public base_ast_builder
   void builder(s3select* self, const char* a, const char* b) const;
 };
 static push_variable g_push_variable;
+
+struct push_json_variable : public base_ast_builder
+{
+  void builder(s3select* self, const char* a, const char* b) const;
+};
+static push_json_variable g_push_json_variable;
 
 /////////////////////////arithmetic unit  /////////////////
 struct push_addsub : public base_ast_builder
@@ -615,7 +628,7 @@ public:
       //the stdin and object_path are for debug purposes(not part of the specs)
       s3_object = json_s3_object | S3SELECT_KW("stdin") | S3SELECT_KW("s3object") | object_path;
 
-      json_s3_object = (S3SELECT_KW("s3object[*]")) >> *(bsc::str_p(".") >> json_path_element);
+      json_s3_object = ((S3SELECT_KW("s3object[*]")) >> *(bsc::str_p(".") >> json_path_element))[BOOST_BIND_ACTION(push_json_from_clause)];
 
       json_path_element = bsc::lexeme_d[+( bsc::alnum_p | bsc::str_p("_")) ];
 
@@ -665,7 +678,8 @@ public:
       
       function = ((variable >> '(' )[BOOST_BIND_ACTION(push_function_name)] >> !list_of_function_arguments >> ')')[BOOST_BIND_ACTION(push_function_expr)];
 
-      arithmetic_argument = (float_number)[BOOST_BIND_ACTION(push_float_number)] |  (number)[BOOST_BIND_ACTION(push_number)] | (column_pos)[BOOST_BIND_ACTION(push_column_pos)] |
+      arithmetic_argument = (float_number)[BOOST_BIND_ACTION(push_float_number)] |  (number)[BOOST_BIND_ACTION(push_number)] | (json_variable_name)[BOOST_BIND_ACTION(push_json_variable)] |
+			    (column_pos)[BOOST_BIND_ACTION(push_column_pos)] |
                             (string)[BOOST_BIND_ACTION(push_string)] | (datediff) | (dateadd) | (extract) | (time_to_string_constant) | (time_to_string_dynamic) |
                             (cast) | (substr) | (trim) |
                             (function) | (variable)[BOOST_BIND_ACTION(push_variable)]; //function is pushed by right-term
@@ -729,10 +743,12 @@ public:
       variable_name =  bsc::lexeme_d[(+bsc::alpha_p >> *( bsc::alpha_p | bsc::digit_p | '_') ) -  S3SELECT_KW("not")];
 
       variable = (variable_name >> "." >> variable_name) | variable_name;
+
+      json_variable_name = bsc::str_p("_1") >> +("." >> variable_name);
     }
 
 
-    bsc::rule<ScannerT> cast, data_type, variable,  variable_name, select_expr, select_expr_base, s3_object, where_clause, number, float_number, string, from_expression;
+    bsc::rule<ScannerT> cast, data_type, variable, json_variable_name, variable_name, select_expr, select_expr_base, s3_object, where_clause, number, float_number, string, from_expression;
     bsc::rule<ScannerT> cmp_operand, arith_cmp, condition_expression, arithmetic_predicate, logical_predicate, factor; 
     bsc::rule<ScannerT> trim, trim_whitespace_both, trim_one_side_whitespace, trim_anychar_anyside, trim_type, trim_remove_type, substr, substr_from, substr_from_for;
     bsc::rule<ScannerT> datediff, dateadd, extract, date_part, date_part_extract, time_to_string_constant, time_to_string_dynamic;
@@ -782,10 +798,17 @@ void push_from_clause::builder(s3select* self, const char* a, const char* b) con
     token = table_name;
   }
 
-  self->getAction()->from_clause = token; //TODO add table alias 
+  self->getAction()->from_clause = token;
 
   self->getAction()->exprQ.clear();
+}
 
+void push_json_from_clause::builder(s3select* self, const char* a, const char* b) const
+{
+  std::string token(a, b),table_name,alias_name;
+
+  //TODO handle the star-operation ('*') in from-clause. build the parameters for json-reader search-api's.
+  self->getAction()->json_from_clause = token;
 }
 
 void push_number::builder(s3select* self, const char* a, const char* b) const
@@ -826,7 +849,7 @@ void push_string::builder(s3select* self, const char* a, const char* b) const
   b--; // remove double quotes
   std::string token(a, b);
 
-  variable* v = S3SELECT_NEW(self, variable, token, variable::var_t::COL_VALUE);
+  variable* v = S3SELECT_NEW(self, variable, token, variable::var_t::COLUMN_VALUE);
 
   self->getAction()->exprQ.push_back(v);
 }
@@ -881,6 +904,18 @@ void push_variable::builder(s3select* self, const char* a, const char* b) const
     v = S3SELECT_NEW(self, variable, token);
   }
   
+  self->getAction()->exprQ.push_back(v);
+}
+
+void push_json_variable::builder(s3select* self, const char* a, const char* b) const
+{//purpose: handle the use case of json-variable structure (_1.a.b.c)
+
+  std::string token(a, b);
+
+  variable* v = nullptr;
+
+  v = S3SELECT_NEW(self, variable, token);
+
   self->getAction()->exprQ.push_back(v);
 }
 
@@ -1325,7 +1360,7 @@ void push_like_predicate_no_escape::builder(s3select* self, const char* a, const
 
   __function* func = S3SELECT_NEW(self, __function, in_function.c_str(), self->getS3F());
   
-  variable* v = S3SELECT_NEW(self, variable, "\\",variable::var_t::COL_VALUE);
+  variable* v = S3SELECT_NEW(self, variable, "\\",variable::var_t::COLUMN_VALUE);
   func->push_argument(v);
   
   // experimenting valgrind-issue happens only on teuthology
