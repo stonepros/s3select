@@ -1790,17 +1790,6 @@ public:
     m_s3_select=m;
     m_sa=m_s3_select->get_scratch_area();
     m_error_count=0;
-    set();
-  }
-
-  virtual bool is_end_of_stream() {return false;}
-  virtual void row_fetch_data() {}
-  virtual void row_update_data() {}
-  virtual void columnar_fetch_where_clause_columns(){}
-  virtual void columnar_fetch_projection(){}
-
-  void set()
-  {
     m_projections = m_s3_select->get_projections_list();
     m_where_clause = m_s3_select->get_filter();
 
@@ -1816,6 +1805,12 @@ public:
 
     m_aggr_flow = m_s3_select->is_aggregate_query();
   }
+
+  virtual bool is_end_of_stream() {return false;}
+  virtual void row_fetch_data() {}
+  virtual void row_update_data() {}
+  virtual void columnar_fetch_where_clause_columns(){}
+  virtual void columnar_fetch_projection(){}
 
   void result_values_to_string(multi_values& projections_resuls, std::string& result)
   {
@@ -1848,7 +1843,7 @@ public:
 	result.append(output_row_delimiter);
   }
 
-  virtual int getMatchRow( std::string& result)
+  int getMatchRow( std::string& result)
   {
     multi_values projections_resuls;
     
