@@ -18,6 +18,8 @@
 #include <boost/bind.hpp>
 #include <functional>
 
+#include <boost/lockfree/queue.hpp>//TODO where producer should be implemented 
+
 #define _DEBUG_TERM {string  token(a,b);std::cout << __FUNCTION__ << token << std::endl;}
 
 namespace s3selectEngine
@@ -1931,7 +1933,149 @@ struct s3select_csv_definitions //TODO
     s3select_csv_definitions():row_delimiter('\n'), column_delimiter(','), output_row_delimiter('\n'), output_column_delimiter(','), escape_char('\\'), output_escape_char('\\'), output_quot_char('"'), quot_char('"'), use_header_info(false), ignore_header_info(false), quote_fields_always(false), quote_fields_asneeded(false), redundant_column(false), comment_empty_lines(false) {}
 
 };
- 
+
+/////// result handling
+class result_storage {
+
+  private:
+
+
+  public:
+  
+    char x[1000];
+    result_storage(int &x){}
+    result_storage(){}
+};
+
+class shared_queue{
+
+  private:
+    boost::lockfree::queue<result_storage> s3select_result_queue{128};
+
+    bool done;
+
+  public:
+  
+    shared_queue():done(false){}
+
+    void producers_complete()
+    {
+      done = true;
+    }
+
+    int push(std::string& result)
+    {
+      result_storage rs;//TODO append should copy to result_storage to skip the string-copy
+      strncpy(rs.x,result.data(),sizeof(rs.x));
+
+      while(!s3select_result_queue.push(rs));
+
+      return 0;
+    }
+
+    int pop()
+    {
+      result_storage value;
+      std::string result;
+
+      while (!done) {
+        while (s3select_result_queue.pop(value))
+	{
+	  result.assign(value.x);
+	  std::cout << ">>" << result << std::endl;//TODO std::function per different type of clients
+	}
+      }
+
+      while (s3select_result_queue.pop(value))
+      {
+	result.assign(value.x);
+	std::cout << ">>" << result << std::endl;
+      }
+      
+      return 0;
+    }
+
+};
+
+class s3select_result {
+//handle different forms of results (arrow-format, producer/consumer(MT), simple string) ... more
+
+std::string result;
+shared_queue* m_shared_queue;
+
+public:
+
+    s3select_result():m_shared_queue(nullptr){}
+
+    void set_shared_queue(shared_queue* sq)
+    {
+	m_shared_queue = sq;
+    }
+    
+    void clear()
+    {
+      result.clear();
+    }
+
+    const char* c_str() const
+    {
+      return result.c_str();
+    }
+
+    size_t size()
+    {
+      return result.size();
+    }
+
+    std::string& append(char* in,size_t n)
+    {
+      return result.append(in,n);
+    }
+    
+    std::string& append(const char* in)
+    {
+      return result.append(in);
+    }
+   
+    std::string& append(const std::string& in)
+    {
+      return result.append(in);
+    }
+    
+    friend std::ostream& operator<< (std::ostream& os, s3select_result& str)
+    {
+      return  os << str.str();
+    }
+
+    std::string& operator= (const std::string& str)
+    {
+      result.assign(str);
+      return result;
+    }
+
+    std::string& str()
+    {
+      return result;
+    }
+
+    int push_producer()
+    {//copy into fix size.
+      
+      if(m_shared_queue)
+      {
+	  m_shared_queue->push(result);
+	  result.clear();
+      }
+
+      return 0;
+    }
+
+    int pop_consumer()
+    {
+      return 0;
+    }
+
+}; 
 
 /////// handling different object types
 class base_s3object
@@ -1979,7 +2123,7 @@ public:
   // for the case were the rows are not fetched, but "pushed" by the data-source parser (JSON)
   virtual bool multiple_row_processing(){return true;}
 
-  void result_values_to_string(multi_values& projections_resuls, std::string& result)
+  void result_values_to_string(multi_values& projections_resuls, s3select_result& result)
   {
     size_t i = 0;
     std::string output_delimiter(1,m_csv_defintion.output_column_delimiter);
@@ -1990,7 +2134,7 @@ public:
             if (m_csv_defintion.quote_fields_always) {
               std::ostringstream quoted_result;
               quoted_result << std::quoted(res->to_string(),m_csv_defintion.output_quot_char, m_csv_defintion.escape_char);
-              result.append(quoted_result.str());
+              result.append(quoted_result.str().data());
             }//TODO to add asneeded
 	    else
 	    {
@@ -2008,9 +2152,11 @@ public:
     }
     if(!m_aggr_flow)
 	result.append(output_row_delimiter);
+
+    result.push_producer();//only upon shared-queue exists
   }
 
-  int getMatchRow( std::string& result)
+  int getMatchRow( s3select_result& result)
   {
     multi_values projections_resuls;
     
@@ -2241,7 +2387,7 @@ public:
   }
 
 
-  int run_s3select_on_stream(std::string& result, const char* csv_stream, size_t stream_length, size_t obj_size)
+  int run_s3select_on_stream(s3select_result& result, const char* csv_stream, size_t stream_length, size_t obj_size)
   {
     int status=0;
     try{
@@ -2266,7 +2412,7 @@ public:
   }
 
 private:
-  int run_s3select_on_stream_internal(std::string& result, const char* csv_stream, size_t stream_length, size_t obj_size)
+  int run_s3select_on_stream_internal(s3select_result& result, const char* csv_stream, size_t stream_length, size_t obj_size)
   {
     //purpose: the cv data is "streaming", it may "cut" rows in the middle, in that case the "broken-line" is stores
     //for later, upon next chunk of data is streaming, the stored-line is merge with current broken-line, and processed.
@@ -2313,7 +2459,7 @@ private:
   }
 
 public:
-  int run_s3select_on_object(std::string& result, const char* csv_stream, size_t stream_length, bool skip_first_line, bool skip_last_line, bool do_aggregate)
+  int run_s3select_on_object(s3select_result& result, const char* csv_stream, size_t stream_length, bool skip_first_line, bool skip_last_line, bool do_aggregate)
   {
     if (do_aggregate && m_previous_line)
     {
@@ -2460,9 +2606,9 @@ public:
   }
   
 
-  int run_s3select_on_object(std::string &result,
-        std::function<int(std::string&)> fp_s3select_result_format,
-        std::function<int(std::string&)> fp_s3select_header_format)
+  int run_s3select_on_object(s3select_result &result,
+        std::function<int(s3select_result&)> fp_s3select_result_format,
+        std::function<int(s3select_result&)> fp_s3select_header_format)
   {
     int status = 0;
 

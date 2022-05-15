@@ -787,8 +787,8 @@ void test_single_column_single_row(const char* input_query,const char* expected_
     }
 
     s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
-    std::string s3select_result;
     std::string json_result;
+    s3select_result csv_result;
     std::string input;
     size_t size = 1;
     generate_csv(input, size);
@@ -800,12 +800,12 @@ void test_single_column_single_row(const char* input_query,const char* expected_
 
 #ifdef _ARROW_EXIST
     csv_to_parquet(input);
-    std::string parquet_result;
+    s3select_result parquet_result;
     run_query_on_parquet_file(input_query,PARQUET_FILENAME,parquet_result);
 #endif
 
     s3_csv_object.m_csv_defintion.redundant_column = false; 
-    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(),
+    status = s3_csv_object.run_s3select_on_object(csv_result, input.c_str(), input.size(),
         false, // dont skip first line
         false, // dont skip last line
         true   // aggregate call
@@ -813,7 +813,7 @@ void test_single_column_single_row(const char* input_query,const char* expected_
 
     if(strcmp(expected_result,"#failure#") == 0)
     {
-      if (status==0 && s3select_result.compare("#failure#")==0)
+      if (status==0 && csv_result.str().compare("#failure#")==0)
       {
 	  ASSERT_TRUE(false);
       }
@@ -823,10 +823,11 @@ void test_single_column_single_row(const char* input_query,const char* expected_
 
     ASSERT_EQ(status, 0);
 #ifdef _ARROW_EXIST
-    parquet_csv_report_error(parquet_result,s3select_result);
+    parquet_csv_report_error(parquet_result.str(),csv_result.str());
 #endif
     json_csv_report_error(json_result, s3select_result);
     ASSERT_EQ(s3select_result, std::string(expected_result));
+    ASSERT_EQ(csv_result.str(), std::string(expected_result));
 }
 
 TEST(TestS3selectFunctions, syntax_1)
@@ -854,18 +855,18 @@ TEST(TestS3selectFunctions, binop_constant)
     auto status = s3select_syntax.parse_query(input_query.c_str());
     ASSERT_EQ(status, 0);
     s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
-    std::string s3select_result;
+    s3select_result result;
     std::string input;
     size_t size = 128;
     generate_csv(input, size);
-    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+    status = s3_csv_object.run_s3select_on_object(result, input.c_str(), input.size(), 
         false, // dont skip first line 
         false, // dont skip last line
         true   // aggregate call
         ); 
     ASSERT_EQ(status, 0);
 
-    int count = count_string(s3select_result,"11,8,6,64,4,1024");
+    int count = count_string(result.str(),"11,8,6,64,4,1024");
     ASSERT_EQ(count,size);
 }
 
@@ -918,12 +919,11 @@ TEST(TestS3SElect, from_stdin)
     auto status = s3select_syntax.parse_query(input_query.c_str());
     ASSERT_EQ(status, 0);
     s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
-    std::string s3select_result;
+    s3select_result result;
     std::string input;
     size_t size = 128;
     generate_csv(input, size);
-    std::string input_copy = input;
-    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(),
+    status = s3_csv_object.run_s3select_on_object(result, input.c_str(), input.size(),
         false, // dont skip first line 
         false, // dont skip last line
         true   // aggregate call
@@ -938,11 +938,11 @@ TEST(TestS3SElect, from_valid_object)
     auto status = s3select_syntax.parse_query(input_query.c_str());
     ASSERT_EQ(status, 0);
     s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
-    std::string s3select_result;
+    s3select_result result;
     std::string input;
     size_t size = 128;
     generate_csv(input, size);
-    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+    status = s3_csv_object.run_s3select_on_object(result, input.c_str(), input.size(), 
         false, // dont skip first line 
         false, // dont skip last line
         true   // aggregate call
@@ -979,17 +979,17 @@ TEST(TestS3selectFunctions, avgzero)
     auto status = s3select_syntax.parse_query(input_query.c_str());
     ASSERT_EQ(status, 0);
     s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
-    std::string s3select_result;
+    s3select_result result;
     std::string input;
     size_t size = 0;
     generate_csv(input, size);
-    status = s3_csv_object.run_s3select_on_object(s3select_result, input.c_str(), input.size(), 
+    status = s3_csv_object.run_s3select_on_object(result, input.c_str(), input.size(), 
         false, // dont skip first line 
         false, // dont skip last line
         true   // aggregate call
         ); 
     ASSERT_EQ(status, -1);
-    ASSERT_EQ(s3select_result, std::string(""));
+    ASSERT_EQ(result.str(), std::string(""));
 }
 
 TEST(TestS3selectFunctions, floatavg)
