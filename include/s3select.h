@@ -455,7 +455,7 @@ public:
 
   int semantic()
   {
-    for (const auto &e : get_projections_list())
+    for (auto e : get_projections_list())
     {
       e->resolve_node();
       //upon validate there is no aggregation-function nested calls, it validates legit aggregation call. 
@@ -531,6 +531,14 @@ public:
     }
 
     return 0;
+  }
+
+  void set_execution_phase(base_statement::multiple_executions_en phase)
+  {//TODO only after parse_query
+    for (const auto &e : get_projections_list())
+    {
+      e->set_phase_state(phase);
+    }
   }
 
   std::string get_error_description()
@@ -2864,6 +2872,90 @@ public:
   }
 
   ~json_object() = default;
+
+class merge_results : public base_s3object
+{//purpose: upon processing several stream on a single aggregate query, this object should merge results.
+
+  private:
+
+  bool m_end_of_stream;
+  s3select_result m_result;
+  std::function<int(value)> publish_results;
+
+  public:
+
+  std::vector<s3selectEngine::s3select*> m_all_processing_object;
+
+  void set_all_processing_objects(std::vector<s3selectEngine::s3select*> objs)
+  {
+    m_all_processing_object = objs;
+  }
+
+  virtual bool is_end_of_stream()
+  {
+    return m_end_of_stream;
+  }
+
+  virtual void row_fetch_data()
+  {
+    if(m_all_processing_object.size() == 0)
+    {//it means all rows are processed, it's time to sum-up.
+      m_end_of_stream = true;
+      m_is_to_aggregate = true;
+      return;
+    }
+    
+    //each item of m_all_processing_object contain results of some data portion
+    //these results consider as a single row.
+    //the row is processed by *this object(with the rest of the rows), the AST node state is set to <SECOND_PHASE>
+    s3selectEngine::s3select* q = m_all_processing_object.back();
+    m_all_processing_object.pop_back();
+    m_s3_select->get_scratch_area()->set_aggregation_results(q->get_scratch_area()->get_aggregation_results());	
+  }
+   
+  s3select_result& get_result()
+  {//TODO should use std::function
+    return m_result;
+  }
+
+  int execute_query()
+  {
+    do
+    {
+
+      int num = 0;
+      try
+      {
+        num = getMatchRow(m_result);
+      }
+      catch (base_s3select_exception& e)
+      {
+	std::cout << "error while processing::" << e.what() << std::endl;
+#if 0
+        m_error_description = e.what();
+        m_error_count ++;
+        if (e.severity() == base_s3select_exception::s3select_exp_en_t::FATAL || m_error_count>100 || (m_stream>=m_end_stream))//abort query execution
+        {
+          return -1;
+        }
+#endif
+
+      }
+
+      if (num < 0)
+      {
+        break;
+      }
+
+    }
+    while (true);
+
+    return 0;
+  }
+
+  merge_results(s3selectEngine::s3select* q):base_s3object(q),m_end_of_stream(false){}
+
+  ~merge_results(){}
 };
 
 }; // namespace s3selectEngine
