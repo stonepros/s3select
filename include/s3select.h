@@ -541,7 +541,8 @@ public:
       e->set_phase_state(phase);
     }
 
-    get_filter()->set_phase_state(phase);
+    if(get_filter())
+      get_filter()->set_phase_state(phase);
   }
 
   std::string get_error_description()
