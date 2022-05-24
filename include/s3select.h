@@ -19,6 +19,7 @@
 #include <functional>
 
 #include <boost/lockfree/queue.hpp>//TODO where producer should be implemented 
+#define unlikely(x)     __builtin_expect((x),0)
 
 #define _DEBUG_TERM {string  token(a,b);std::cout << __FUNCTION__ << token << std::endl;}
 
@@ -539,6 +540,8 @@ public:
     {
       e->set_phase_state(phase);
     }
+
+    get_filter()->set_phase_state(phase);
   }
 
   std::string get_error_description()
@@ -2202,7 +2205,8 @@ public:
         }
 
 	row_update_data();
-        if (!m_where_clause || m_where_clause->eval().is_true())
+	//the second phase is relevant only for aggregation flows
+        if (!m_where_clause || unlikely(m_where_clause->is_second_phase()) || m_where_clause->eval().is_true())
 	{
 	  columnar_fetch_projection();
           for (auto i : m_projections)

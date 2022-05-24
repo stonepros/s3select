@@ -9,6 +9,8 @@
 #include <algorithm>
 
 using namespace std::string_literals;
+#define unlikely(x)     __builtin_expect((x),0)
+//#define unlikely(x)  (x)
 
 #define BOOST_BIND_ACTION_PARAM( push_name ,param ) boost::bind( &push_name::operator(), g_ ## push_name , _1 ,_2, param)
 namespace s3selectEngine
@@ -553,7 +555,7 @@ struct _fn_sum : public base_function
     base_statement* x = *iter;
     value res;
 
-    if(is_second_phase())
+    if(unlikely(is_second_phase()))
     {
       m_scratch_area->pop_saved_result(res);
     }
@@ -601,7 +603,7 @@ struct _fn_count : public base_function
 
   bool operator()(bs_stmt_vec_t* args, variable* result) override
   {
-    if(is_second_phase())
+    if(unlikely(is_second_phase()))
     {
       m_scratch_area->pop_saved_result(saved_result);
       count = count + saved_result.i64();
@@ -652,7 +654,7 @@ struct _fn_avg : public base_function
         auto iter = args->begin();
         base_statement *x = *iter;
 
-	if(is_second_phase())
+	if(unlikely(is_second_phase()))
 	{
 	  m_scratch_area->pop_saved_result(sum_save);
 	  m_scratch_area->pop_saved_result(count_save);
@@ -708,7 +710,7 @@ struct _fn_min : public base_function
     base_statement* x =  *iter;
     value res;
 
-    if(is_second_phase())
+    if(unlikely(is_second_phase()))
     {
       m_scratch_area->pop_saved_result(res);
     }
@@ -752,7 +754,7 @@ struct _fn_max : public base_function
     base_statement* x =  *iter;
     value res;
 
-    if(is_second_phase())
+    if(unlikely(is_second_phase()))
     {
       m_scratch_area->pop_saved_result(res);
     }

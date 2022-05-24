@@ -477,8 +477,6 @@ int run_on_localFile(char* input_query)
   {
     size_t input_sz = fread(buff, 1, BUFF_SIZE, fp);
     char* in=buff;
-    //input_sz = strlen(buff);
-    //size_t input_sz = in == 0 ? 0 : strlen(in);
 
     if (!input_sz || feof(fp)) 
     {
@@ -492,7 +490,7 @@ int run_on_localFile(char* input_query)
     }
     else
     {
-      status = s3_csv_object.run_s3select_on_stream(result, in, input_sz, statbuf.st_size);
+      status = s3_csv_object.run_s3select_on_stream(result, in, input_sz, __INT64_MAX__);
     }
 
     if(status<0)
