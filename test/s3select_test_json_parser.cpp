@@ -248,13 +248,13 @@ int RGW_send_data(const char* object_name, std::string & result)
 	while(read_size)
 	{
 		//the handler is processing any buffer size
-		int status = handler.process_json_buffer(buff, read_size, fp);
+		int status = handler.process_json_buffer(buff, read_size);
 		if(status<0) return -1;
 
 		//read next chunk
 		read_size = input_file_stream.readsome(buff, buff_sz);
 	}
-	handler.process_json_buffer(0, 0, fp, true);
+	handler.process_json_buffer(0, 0, true);
 
 	//result = handler.get_full_result();
 	return 0;
@@ -380,7 +380,8 @@ std::string run_sax(const char * in)
 
 	//handler.key_value_criteria = true;
 
-	int status = handler.process_json_buffer(base64_decode(std::string(in)).data(), strlen(in), fp);
+	handler.set_exact_match_callback( fp );
+	int status = handler.process_json_buffer(base64_decode(std::string(in)).data(), strlen(in));
 
 	if(status==0)
 	{
@@ -415,11 +416,13 @@ std::string run_exact_filter(const char * in, std::vector<std::vector<std::strin
 
 	int status{1};
 
-	handler.from_clause = pattern[0];
+	handler.set_prefix_match(pattern[0]);
 
-    handler.query_matrix = pattern;
+	std::vector<std::vector<std::string>> pattern_minus_first(pattern.begin()+1,pattern.end());
+	handler.set_exact_match_filters( pattern_minus_first );
 
-	status = handler.process_json_buffer(base64_decode(std::string(in)).data(), strlen(in), fp);
+	handler.set_exact_match_callback( fp );
+	status = handler.process_json_buffer(base64_decode(std::string(in)).data(), strlen(in));
 
 	std::cout<<"\n";
 
@@ -491,9 +494,10 @@ int sax_row_count(const char *in, std::vector<std::string>& from_clause)
 
 	int status{1};
 
-	handler.from_clause = from_clause;
+	handler.set_prefix_match(from_clause);
 
-	status = handler.process_json_buffer(base64_decode(std::string(in)).data(), strlen(in), fp);
+	handler.set_exact_match_callback( fp );
+	status = handler.process_json_buffer(base64_decode(std::string(in)).data(), strlen(in));
 
 	std::cout<<"\n";
 

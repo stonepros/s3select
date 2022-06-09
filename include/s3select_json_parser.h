@@ -224,7 +224,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
 
     row_state state = row_state::NA;
 
-    std::function <int(std::pair < std::string, Valuesax>)> fp;
+    std::function <int(std::pair < std::string, Valuesax>)> m_exact_match_cb;
 
     std::vector <std::vector<std::string>> query_matrix{};
     int row_count{};
@@ -276,9 +276,9 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     void push_new_key_value(Valuesax& v)
     {  
       if (prefix_match) {
-        for (size_t i = 1; i < query_matrix.size(); i++) { // 0th index -> from-clause. Ignore that.
-          if(std::equal(key_path.begin() + from_clause.size(), key_path.end(), query_matrix[i].begin())) {
-            fp(make_pair(get_key_path(),v));
+        for (auto filter : query_matrix) {
+          if(std::equal(key_path.begin() + from_clause.size(), key_path.end(), filter.begin())) {
+            m_exact_match_cb(make_pair(get_key_path(),v));
           }
         }
       }
@@ -375,10 +375,24 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       return true;
     }
 
-    int process_json_buffer(char* json_buffer,size_t json_buffer_sz, std::function <int(std::pair < std::string, Valuesax>)>& f, bool end_of_stream=false)
+    void set_prefix_match(std::vector<std::string>& prefix_match)
+    {//purpose: set the filter according to SQL statement(from clause)
+      from_clause = prefix_match;
+    }
+
+    void set_exact_match_filters(std::vector <std::vector<std::string>>& exact_match_filters)
+    {//purpose: set the filters according to SQL statement(projection columns, predicates columns)
+      query_matrix = exact_match_filters;
+    }
+
+    void set_exact_match_callback(std::function <int(std::pair < std::string, Valuesax>)>& f)
+    {
+      m_exact_match_cb = f;
+    }
+
+    int process_json_buffer(char* json_buffer,size_t json_buffer_sz, bool end_of_stream=false)
     {//user keeps calling with buffers, the method is not aware of the object size.
 
-      fp = f;
 
 	    if(!init_buffer_stream)
 	    {
