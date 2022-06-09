@@ -405,7 +405,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       from_clause = prefix_match;
     }
 
-    void set_exact_match_filters(std::vector<std::vector<std::string>>& exact_match_filters)
+    void set_exact_match_filters(std::vector <std::vector<std::string>>& exact_match_filters)
     {//purpose: set the filters according to SQL statement(projection columns, predicates columns)
       query_matrix = exact_match_filters;
     }
