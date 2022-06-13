@@ -159,7 +159,6 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     row_state state = row_state::NA;
     std::function <int(s3selectEngine::value&,int)> m_exact_match_cb;
 
-
     std::vector <std::vector<std::string>> query_matrix{};
     int row_count{};
     std::vector <std::string> from_clause{};
@@ -324,7 +323,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       from_clause = prefix_match;
     }
 
-    void set_exact_match_filters(std::vector <std::vector<std::string>>& exact_match_filters)
+    void set_exact_match_filters(std::vector<std::vector<std::string>>& exact_match_filters)
     {//purpose: set the filters according to SQL statement(projection columns, predicates columns)
       query_matrix = exact_match_filters;
     }
