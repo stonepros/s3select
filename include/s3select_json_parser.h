@@ -6,12 +6,17 @@
 #include "rapidjson/filereadstream.h"
 #include "rapidjson/filewritestream.h"
 #include "rapidjson/error/en.h"
+#include "rapidjson/document.h"
 #include <cassert>
 #include <sstream>
 #include <vector>
 #include <iostream>
 #include <functional>
+//#include "s3select.h"
+#include <boost/spirit/include/classic_core.hpp>
+#include "s3select_oper.h"//class value
 
+//TODO namespace 
 class Valuesax {
 //TODO replace with s3select::value
   public:
@@ -88,7 +93,7 @@ class Valuesax {
 
     Type type() const { return _type; }
 
-    int asInt() const {
+    int64_t asInt() const {
       assert(_type == Decimal && "not an int");
       return _num;
     }
@@ -211,6 +216,8 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
 
     typedef enum {OBJECT_STATE,ARRAY_STATE} en_json_elm_state_t;
 
+    typedef std::pair<std::vector<std::string>, Valuesax> json_key_value_t;
+
     enum class row_state
     {
       NA,
@@ -223,8 +230,8 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     };
 
     row_state state = row_state::NA;
-
-    std::function <int(std::pair < std::string, Valuesax>)> m_exact_match_cb;
+// TODO its possible there is no need to std::vector<std::string>, the json-idx is enough
+    std::function <int(JsonParserHandler::json_key_value_t&,int)> m_exact_match_cb;
 
     std::vector <std::vector<std::string>> query_matrix{};
     int row_count{};
@@ -237,6 +244,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     std::vector<en_json_elm_state_t> json_element_state;
     std::string m_result;//debug purpose
     std::vector<std::string> key_path;
+    std::function<int(void)> m_s3select_processing;
 
     JsonParserHandler() : init_buffer_stream(false)
     {} 
@@ -268,18 +276,24 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       else if (prefix_match) {
           if (state == row_state::ARRAY || state == row_state::START_ROW) {
             state = row_state::START_ROW;
+	    m_s3select_processing();
             ++row_count;
           }
       }
     }
 
     void push_new_key_value(Valuesax& v)
-    {  
+    { int json_idx =0; 
+
       if (prefix_match) {
         for (auto filter : query_matrix) {
-          if(std::equal(key_path.begin() + from_clause.size(), key_path.end(), filter.begin())) {
-            m_exact_match_cb(make_pair(get_key_path(),v));
+          if(std::equal(key_path.begin() + from_clause.size(), key_path.end(), filter.begin())) {//TODO ignore case sensitive
+	    //TODO very intensove not need for key-path
+	    JsonParserHandler::json_key_value_t found_variable(key_path,v);
+
+            m_exact_match_cb(found_variable, json_idx);
           }
+	  json_idx ++;//TODO can use filter - begin()
         }
       }
       dec_key_path();
@@ -323,7 +337,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     bool Key(const char* str, rapidjson::SizeType length, bool copy) {
       key_path.push_back(std::string(str));
       
-      if (key_path == from_clause) {
+      if (key_path == from_clause || from_clause.size()==0) {
         prefix_match = true;
       }
       return true;
@@ -334,9 +348,11 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
         if (prefix_match && (key_path[key_path.size() -1] == from_clause[from_clause.size() - 1])) {
           if (state != row_state::ARRAY && state != row_state::ARRAY_END_ROW) {
           state = row_state::OBJECT_START_ROW;
+	  m_s3select_processing();
           ++row_count;
         } else {
           state = row_state::ARRAY_START_ROW;
+	  m_s3select_processing();
           ++row_count;
           }
         }
@@ -380,14 +396,19 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       from_clause = prefix_match;
     }
 
-    void set_exact_match_filters(std::vector <std::vector<std::string>>& exact_match_filters)
+    void set_exact_match_filters(std::vector<std::vector<std::string>>& exact_match_filters)
     {//purpose: set the filters according to SQL statement(projection columns, predicates columns)
       query_matrix = exact_match_filters;
     }
 
-    void set_exact_match_callback(std::function <int(std::pair < std::string, Valuesax>)>& f)
-    {
+    void set_exact_match_callback(std::function<int(json_key_value_t&,int)> f)
+    {//purpose: upon key is matching one of the exact filters, the callback is called.
       m_exact_match_cb = f;
+    }
+
+    void set_s3select_processing_callback(std::function<int(void)>& f)
+    {//purpose: execute s3select statement on matching row (according to filters)
+      m_s3select_processing = f;
     }
 
     int process_json_buffer(char* json_buffer,size_t json_buffer_sz, bool end_of_stream=false)
