@@ -12,6 +12,7 @@
 #include "s3select_oper.h"
 #include "s3select_functions.h"
 #include "s3select_csv_parser.h"
+#include "s3select_json_parser.h"
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 #include <functional>
@@ -70,6 +71,7 @@ struct actionQ
   std::vector<base_statement*> predicate_columns;
   std::vector<base_statement*> projections_columns; 
 
+  std::vector<std::vector<std::string>> json_variables;//contains all key-path according to sql statement
   size_t when_then_count;
 
   actionQ(): inMainArg(0),from_clause("##"),column_prefix("##"),table_alias("##"),projection_or_predicate_state(true),when_then_count(0){}//TODO remove when_then_count
@@ -580,9 +582,19 @@ public:
     return &m_actionQ.alias_map;
   }
 
+  std::vector<std::vector<std::string>>& get_json_variables_key_path()
+  {
+    return m_actionQ.json_variables;
+  }
+
   bool is_aggregate_query() const
   {
     return aggr_flow == true;
+  }
+
+  bool is_json_query()
+  {
+    return m_actionQ.json_from_clause.empty() != true;
   }
 
   ~s3select()
@@ -912,11 +924,30 @@ void push_json_variable::builder(s3select* self, const char* a, const char* b) c
 
   std::string token(a, b);
 
-  variable* v = nullptr;
+  if(token.find("_1") != std::string::npos)
+  {//TODO handle the use case upon no "_1"
+    token = token.substr(token.find("_1")+3);
+  }
 
-  v = S3SELECT_NEW(self, variable, token);
+  std::vector<std::string> variable_key_path;
+  const char* delimiter = ".";
+  char* path_part = strdup(token.data());  
+
+  path_part = std::strtok(path_part, delimiter);
+  while (path_part) {
+	std::string part=path_part;
+	variable_key_path.push_back(part);	
+        path_part = std::strtok(nullptr, delimiter);
+  }
+
+  variable* v = nullptr;
+  free(path_part);
+
+  v = S3SELECT_NEW(self, variable, token, variable::var_t::JSON_VARIABLE, self->getAction()->json_variables.size());
 
   self->getAction()->exprQ.push_back(v);
+
+  self->getAction()->json_variables.push_back(variable_key_path);
 }
 
 void push_addsub::builder(s3select* self, const char* a, const char* b) const
@@ -2428,6 +2459,105 @@ public:
 
 };
 #endif //_ARROW_EXIST
+
+class json_object : public base_s3object
+{
+private:
+
+  JsonParserHandler JsonHandler;
+  size_t m_processed_bytes;
+  bool m_end_of_stream;
+  std::string s3select_result;
+
+public:
+    
+  json_object(s3select* query):base_s3object(query),m_processed_bytes(0),m_end_of_stream(false)
+  {
+    //setting the container for all exact-filters, to be extracted by the json reader    
+    JsonHandler.set_exact_match_filters(query->get_json_variables_key_path());
+
+    std::function<int(void)> f_sql = [this](void){auto res = sql_execution_on_row_cb();return res;};
+    std::function<int(JsonParserHandler::json_key_value_t&, int)> 
+      f_push_to_scratch = [this](JsonParserHandler::json_key_value_t& key_value,int json_var_idx){return push_into_scratch_area_cb(key_value,json_var_idx);};
+
+    JsonHandler.set_s3select_processing_callback(f_sql);//calling to getMatchRow
+    JsonHandler.set_exact_match_callback(f_push_to_scratch);//upon excat match push to scratch area 
+
+    m_sa->set_parquet_type();
+  }
+
+  virtual bool is_end_of_stream()
+  {
+      //TODO set by run_s3select_on_stream
+      return m_end_of_stream == true;
+  }
+
+  virtual void row_fetch_data()
+  {
+        //m_number_of_tokens = getNextRow();
+  }
+  
+  virtual void row_update_data()
+  {
+	//done by set_scratch_area
+        //m_sa->update(m_row_tokens, m_number_of_tokens);
+  }
+
+  int sql_execution_on_row_cb()
+  {
+      //execute statement on row 
+      //and create response 
+      
+      //getMatchRow( result );
+      auto status = getMatchRow(s3select_result);
+      return status;
+  }
+
+  int push_into_scratch_area_cb(JsonParserHandler::json_key_value_t& key_value,int json_var_idx)
+  {
+    //upon exact-filter match push value to scratch area with json-idx ,  it should match variable
+    //push (key path , json-var-idx , value) json-var-idx should be attached per each exact filter
+
+    value v; 
+    switch(key_value.second.type()) {
+      case Valuesax::Decimal: 
+	v=key_value.second.asInt();
+      break;
+      case Valuesax::Double:  
+	v=key_value.second.asDouble();
+      break;
+      case Valuesax::String:  
+	v=key_value.second.asString().data();
+      break;
+      case Valuesax::Bool:  
+	v=key_value.second.asBool();
+      break;
+      case Valuesax::Null: 
+	v.setnull();
+      default:
+      break;
+    }
+ 
+    m_sa->update_json_varible(v,json_var_idx);
+    return 0;
+  }
+
+  int run_s3select_on_stream(std::string& result, const char* json_stream, size_t stream_length, size_t obj_size)
+  {
+    //TODO how to set end of stream(obj_size , same as CSV)
+
+    m_processed_bytes += stream_length;
+
+    //the handler is processing any buffer size
+    int status = JsonHandler.process_json_buffer((char*)json_stream, stream_length);
+
+    if(status<0) return -1;
+    //JsonHandler.process_json_buffer(0, 0, true);//TODO on last chunk
+
+  }
+
+  ~json_object() = default;
+};
 
 }; // namespace s3selectEngine
 

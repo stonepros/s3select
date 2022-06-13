@@ -1027,7 +1027,7 @@ private:
 public:
 
   scratch_area():m_upper_bound(-1),parquet_type(false),buff_loc(0)
-  {
+  {//TODO it should resize dynamicly
     m_schema_values = new std::vector<value>(128,value(""));
   }
 
@@ -1123,6 +1123,12 @@ public:
   void init_string_buff() //TODO temporary
   {
     buff_loc=0;
+  }
+
+  int update_json_varible(value v,int json_idx)
+  {
+    (*m_schema_values)[ json_idx ] = v;
+    return 0;
   }
 
 #ifdef _ARROW_EXIST
@@ -1379,6 +1385,7 @@ public:
     NA,
     VARIABLE_NAME,//schema column (i.e. age , price , ...)
     COLUMN_VALUE, //concrete value (string,number,boolean)
+    JSON_VARIABLE,//a key-path reference
     POS, // CSV column number  (i.e. _1 , _2 ... )
     STAR_OPERATION, //'*'
   } ;
@@ -1392,20 +1399,30 @@ private:
   std::string m_star_op_result;
   char m_star_op_result_charc[4096]; //TODO cause larger allocations for other objects containing variable (dynamic is one solution)
   std::vector<value> star_operation_values;
+  int json_variable_idx;
 
   const int undefined_column_pos = -1;
   const int column_alias = -2;
 
 public:
-  variable():m_var_type(var_t::NA), _name(""), column_pos(-1) {}
+  variable():m_var_type(var_t::NA), _name(""), column_pos(-1), json_variable_idx(-1) {}
 
-  explicit variable(int64_t i) : m_var_type(var_t::COLUMN_VALUE), column_pos(-1), var_value(i) {}
+  explicit variable(int64_t i) : m_var_type(var_t::COLUMN_VALUE), column_pos(-1), var_value(i), json_variable_idx(-1) {}
 
-  explicit variable(double d) : m_var_type(var_t::COLUMN_VALUE), _name("#"), column_pos(-1), var_value(d) {}
+  explicit variable(double d) : m_var_type(var_t::COLUMN_VALUE), _name("#"), column_pos(-1), var_value(d), json_variable_idx(-1) {}
 
-  explicit variable(int i) : m_var_type(var_t::COLUMN_VALUE), column_pos(-1), var_value(i) {}
+  explicit variable(int i) : m_var_type(var_t::COLUMN_VALUE), column_pos(-1), var_value(i), json_variable_idx(-1) {}
 
-  explicit variable(const std::string& n) : m_var_type(var_t::VARIABLE_NAME), _name(n), column_pos(-1) {}
+  explicit variable(const std::string& n) : m_var_type(var_t::VARIABLE_NAME), _name(n), column_pos(-1), json_variable_idx(-1) {}
+
+  explicit variable(const std::string& n, var_t tp, size_t json_idx) : m_var_type(var_t::NA), json_variable_idx(-1)
+  {//only upon JSON use case
+    if(tp == variable::var_t::JSON_VARIABLE)
+    {
+      m_var_type = variable::var_t::JSON_VARIABLE;
+      json_variable_idx = static_cast<int>(json_variable_idx);
+    } 
+  }
 
   variable(const std::string& n,  var_t tp) : m_var_type(var_t::NA)
   {
@@ -1532,7 +1549,7 @@ public:
     return var_value.type;
   }
 
-
+  //TODO star-operation for JSON 
   value& star_operation()   //purpose return content of all columns in a input stream
   {
     size_t pos=0;

@@ -1,5 +1,4 @@
 #include "s3select_json_parser.h"
-#include "rapidjson/document.h"
 #include <gtest/gtest.h>
 #include <cassert>
 #include <sstream>
@@ -451,16 +450,19 @@ std::string run_sax(const char * in)
 {
 	JsonParserHandler handler;
 	std::string result{};
-	std::function<int(std::pair < std::string, Valuesax>)> fp = [&result](std::pair<std::string, Valuesax > key_value) {
+	std::function<int(JsonParserHandler::json_key_value_t&,int)> fp = [&result](JsonParserHandler::json_key_value_t& key_value,int json_idx) {
 	  std::stringstream filter_result;
       filter_result.str("");
-      
+    
+      std::string match_key_path;
+      for(auto k : key_value.first){match_key_path.append(k);} 
+
 		    switch(key_value.second.type()) {
-			    case Valuesax::Decimal: filter_result << key_value.first << " : " << key_value.second.asInt() << "\n"; break;
-			    case Valuesax::Double: filter_result << key_value.first << " : " << key_value.second.asDouble() << "\n"; break;
-			    case Valuesax::String: filter_result << key_value.first << " : " << key_value.second.asString() << "\n"; break;
-			    case Valuesax::Bool: filter_result << key_value.first << " : " <<std::boolalpha << key_value.second.asBool() << "\n"; break;
-			    case Valuesax::Null: filter_result << key_value.first << " : " << "null" << "\n"; break;
+			    case Valuesax::Decimal: filter_result << match_key_path << " : " << key_value.second.asInt() << "\n"; break;
+			    case Valuesax::Double: filter_result << match_key_path  << " : " << key_value.second.asDouble() << "\n"; break;
+			    case Valuesax::String: filter_result << match_key_path << " : " << key_value.second.asString() << "\n"; break;
+			    case Valuesax::Bool: filter_result << match_key_path << " : " <<std::boolalpha << key_value.second.asBool() << "\n"; break;
+			    case Valuesax::Null: filter_result << match_key_path << " : " << "null" << "\n"; break;
 			    default: break;
 		    }
       std::cout<<filter_result.str();
@@ -487,16 +489,18 @@ std::string run_exact_filter(const char * in, std::vector<std::vector<std::strin
 	std::vector<std::string> keys;
 	std::string result{};
 
-	std::function<int(std::pair < std::string, Valuesax>)> fp = [&result](std::pair<std::string, Valuesax > key_value) {
+	std::function<int(JsonParserHandler::json_key_value_t&,int)> fp = [&result](JsonParserHandler::json_key_value_t& key_value,int json_idx) {
 	  std::stringstream filter_result;
       filter_result.str("");
+      std::string match_key_path;
+      for(auto k : key_value.first){match_key_path.append(k);} 
       
 		    switch(key_value.second.type()) {
-			    case Valuesax::Decimal: filter_result << key_value.first << " : " << key_value.second.asInt() << "\n"; break;
-			    case Valuesax::Double: filter_result << key_value.first << " : " << key_value.second.asDouble() << "\n"; break;
-			    case Valuesax::String: filter_result << key_value.first << " : " << key_value.second.asString() << "\n"; break;
-			    case Valuesax::Bool: filter_result << key_value.first << " : " <<std::boolalpha << key_value.second.asBool() << "\n"; break;
-			    case Valuesax::Null: filter_result << key_value.first << " : " << "null" << "\n"; break;
+			    case Valuesax::Decimal: filter_result << match_key_path << " : " << key_value.second.asInt() << "\n"; break;
+			    case Valuesax::Double: filter_result << match_key_path << " : " << key_value.second.asDouble() << "\n"; break;
+			    case Valuesax::String: filter_result << match_key_path << " : " << key_value.second.asString() << "\n"; break;
+			    case Valuesax::Bool: filter_result << match_key_path << " : " <<std::boolalpha << key_value.second.asBool() << "\n"; break;
+			    case Valuesax::Null: filter_result << match_key_path << " : " << "null" << "\n"; break;
 			    default: break;
 		    }
       std::cout<<filter_result.str();
@@ -580,7 +584,7 @@ int sax_row_count(const char *in, std::vector<std::string>& from_clause)
 	JsonParserHandler handler;
 	std::vector<std::string> keys;
 
-	std::function<int(std::pair < std::string, Valuesax>)> fp;
+	std::function<int(JsonParserHandler::json_key_value_t&,int)> fp;
 
 	int status{1};
 
