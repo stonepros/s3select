@@ -763,6 +763,16 @@ TEST(TestS3selectJsonParser, iterativeParse)
 
 }
 
+TEST(TestS3selectJsonParser, iterativeParse)
+{
+    if(getenv("JSON_FILE"))
+    {
+      std::string result;
+      int status = RGW_send_data(getenv("JSON_FILE"), result);
+    }
+
+}
+
 TEST(TestS3selectJsonParser, row_count)
 {
 	std::vector<std::string> from_clause_0 = {"nested_obj", "nested2"};
