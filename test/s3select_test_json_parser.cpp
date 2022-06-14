@@ -255,6 +255,7 @@ int RGW_send_data(const char* object_name, std::string & result)
 	}
 	handler.process_json_buffer(0, 0, true);
 
+	free(buff);
 	//result = handler.get_full_result();
 	return 0;
 }
@@ -691,6 +692,16 @@ glossary/GlossDiv/GlossList/GlossEntry/GlossDef/GlossSeeAlso/ : XML
 glossary/GlossDiv/GlossList/GlossEntry/GlossSee/ : markup
 )";
 	ASSERT_EQ( sax_exact_filter(TEST5, input10), result_9);
+}
+
+TEST(TestS3selectJsonParser, iterativeParse)
+{
+    if(getenv("JSON_FILE"))
+    {
+      std::string result;
+      int status = RGW_send_data(getenv("JSON_FILE"), result);
+    }
+
 }
 
 TEST(TestS3selectJsonParser, row_count)

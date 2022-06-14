@@ -245,8 +245,9 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     std::string m_result;//debug purpose
     std::vector<std::string> key_path;
     std::function<int(void)> m_s3select_processing;
+    bool m_end_of_chunk;
 
-    JsonParserHandler() : init_buffer_stream(false)
+    JsonParserHandler() : init_buffer_stream(false),m_end_of_chunk(false)
     {} 
 
     std::string get_key_path()
@@ -285,12 +286,20 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     void push_new_key_value(Valuesax& v)
     { int json_idx =0; 
 
+      //std::cout << get_key_path() << std::endl;
+
+      auto predicate = [](std::string& it1, std::string& it2)
+			  {
+			    boost::to_upper(it1);
+			    boost::to_upper(it2);
+			    return it1 == it2;
+			  };
+
       if (prefix_match) {
         for (auto filter : query_matrix) {
-          if(std::equal(key_path.begin() + from_clause.size(), key_path.end(), filter.begin())) {//TODO ignore case sensitive
+          if(std::equal(key_path.begin() + from_clause.size(), key_path.end(), filter.begin(),predicate)) {
 	    //TODO very intensove not need for key-path
 	    JsonParserHandler::json_key_value_t found_variable(key_path,v);
-
             m_exact_match_cb(found_variable, json_idx);
           }
 	  json_idx ++;//TODO can use filter - begin()
@@ -345,14 +354,12 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
 
     bool StartObject() {      
       if (key_path.size()) {
-        if (prefix_match && (key_path[key_path.size() -1] == from_clause[from_clause.size() - 1])) {
+        if (prefix_match && from_clause.size() && (key_path[key_path.size() -1] == from_clause[from_clause.size() - 1])) {
           if (state != row_state::ARRAY && state != row_state::ARRAY_END_ROW) {
           state = row_state::OBJECT_START_ROW;
-	  m_s3select_processing();
           ++row_count;
         } else {
           state = row_state::ARRAY_START_ROW;
-	  m_s3select_processing();
           ++row_count;
           }
         }
@@ -367,16 +374,18 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       dec_key_path();
       if (state == row_state::OBJECT_START_ROW) {
         state = row_state::END_ROW;
+	m_s3select_processing();
       }
       if (state == row_state::ARRAY_START_ROW) {
         state = row_state::ARRAY_END_ROW;
-      }
+	m_s3select_processing();
+       }
       return true; 
     }
  
     bool StartArray() {
       json_element_state.push_back(ARRAY_STATE);
-      if (prefix_match && (key_path[key_path.size() - 1] == from_clause[from_clause.size() - 1])) {
+      if (prefix_match && from_clause.size() && (key_path[key_path.size() - 1] == from_clause[from_clause.size() - 1])) {
           state = row_state::ARRAY;
         }
       return true;
@@ -411,10 +420,14 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       m_s3select_processing = f;
     }
 
+    bool end_of_chunk()
+    {
+      return m_end_of_chunk;
+    }
+
     int process_json_buffer(char* json_buffer,size_t json_buffer_sz, bool end_of_stream=false)
     {//user keeps calling with buffers, the method is not aware of the object size.
-
-
+      m_end_of_chunk = false;
       try {
 
 	      if(!init_buffer_stream)
@@ -453,6 +466,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       catch (std::exception& e) {
         std::cerr << "exception caught: " << e.what() << '\n';
       }
+      m_end_of_chunk = true;
 	    return 0;
     }
 };
