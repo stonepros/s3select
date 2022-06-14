@@ -1415,12 +1415,13 @@ public:
 
   explicit variable(const std::string& n) : m_var_type(var_t::VARIABLE_NAME), _name(n), column_pos(-1), json_variable_idx(-1) {}
 
-  explicit variable(const std::string& n, var_t tp, size_t json_idx) : m_var_type(var_t::NA), json_variable_idx(-1)
+  explicit variable(const std::string& n, var_t tp, size_t json_idx) : m_var_type(var_t::NA)
   {//only upon JSON use case
     if(tp == variable::var_t::JSON_VARIABLE)
     {
       m_var_type = variable::var_t::JSON_VARIABLE;
-      json_variable_idx = static_cast<int>(json_variable_idx);
+      json_variable_idx = static_cast<int>(json_idx);
+      _name = n;//"#"; debug
     } 
   }
 
@@ -1590,6 +1591,10 @@ public:
     else if(m_var_type == var_t::STAR_OPERATION)
     {
       return star_operation();
+    }
+    else if(m_var_type == var_t::JSON_VARIABLE && json_variable_idx >= 0)
+    {
+      column_pos = json_variable_idx; //TODO handle column alias
     }
     else if (column_pos == undefined_column_pos)
     {

@@ -379,6 +379,8 @@ int process_json_query(const char* input_query,const char* fname)
 
   while(read_sz)
   {
+    std::cout << "read next chunk " << read_sz << std::endl;
+
     status = json_query_processor.run_s3select_on_stream(result, buff.data(), read_sz, object_sz);
  
     if(status<0)
@@ -388,6 +390,7 @@ int process_json_query(const char* input_query,const char* fname)
     } 
     read_sz = input_file_stream.readsome(buff.data(),BUFFER_SIZE);  
   }
+  json_query_processor.run_s3select_on_stream(result, 0, 0, object_sz);
 
   return 0;
 }
