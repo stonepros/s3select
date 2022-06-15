@@ -2552,6 +2552,8 @@ public:
     int status = JsonHandler.process_json_buffer((char*)json_stream, stream_length);
 
     if(status<0) return -1;
+
+    return 0;
     //JsonHandler.process_json_buffer(0, 0, true);//TODO on last chunk
 
   }
