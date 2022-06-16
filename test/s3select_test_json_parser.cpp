@@ -9,7 +9,6 @@
 #include "s3select_oper.h"
 #include <boost/algorithm/string/predicate.hpp>
 
-
 // ===== base64 encode/decode
 
 typedef unsigned char uchar;
@@ -759,16 +758,7 @@ TEST(TestS3selectJsonParser, iterativeParse)
     {
       std::string result;
       int status = RGW_send_data(getenv("JSON_FILE"), result);
-    }
-
-}
-
-TEST(TestS3selectJsonParser, iterativeParse)
-{
-    if(getenv("JSON_FILE"))
-    {
-      std::string result;
-      int status = RGW_send_data(getenv("JSON_FILE"), result);
+      ASSERT_EQ(status, 0);
     }
 
 }
