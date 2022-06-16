@@ -386,7 +386,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     bool StartArray() {
       json_element_state.push_back(ARRAY_STATE);
       if (prefix_match && from_clause.size() && (key_path[key_path.size() - 1] == from_clause[from_clause.size() - 1])) {
-          state = row_state::ARRAY;
+         state = row_state::ARRAY;
         }
       return true;
     }
@@ -405,7 +405,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       from_clause = prefix_match;
     }
 
-    void set_exact_match_filters(std::vector<std::vector<std::string>>& exact_match_filters)
+    void set_exact_match_filters(std::vector <std::vector<std::string>>& exact_match_filters)
     {//purpose: set the filters according to SQL statement(projection columns, predicates columns)
       query_matrix = exact_match_filters;
     }
@@ -427,7 +427,6 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
 
     int process_json_buffer(char* json_buffer,size_t json_buffer_sz, bool end_of_stream=false)
     {//user keeps calling with buffers, the method is not aware of the object size.
-
 
 	    m_end_of_chunk = false;
 

@@ -1888,7 +1888,7 @@ public:
     {
       p->traverse_and_apply(m_sa, m_s3_select->get_aliases());
     }
-
+    m_is_to_aggregate = true;//TODO not correct. should be set upon end-of-stream
     m_aggr_flow = m_s3_select->is_aggregate_query();
   }
 
@@ -2575,6 +2575,7 @@ public:
 
     //the handler is processing any buffer size
     int status = JsonHandler.process_json_buffer((char*)json_stream, stream_length);
+
     if(status<0)
     {
      //TODO error handling

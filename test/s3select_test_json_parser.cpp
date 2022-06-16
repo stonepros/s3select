@@ -357,16 +357,107 @@ c3VjaCBhcyBEb2NCb29rLiIsCgkJCQkJCSJHbG9zc1NlZUFsc28iOiBbIkdNTCIsICJYTUwiXQog\
 ICAgICAgICAgICAgICAgICAgIH0sCgkJCQkJIkdsb3NzU2VlIjogIm1hcmt1cCIKICAgICAgICAg\
 ICAgICAgIH0KICAgICAgICAgICAgfQogICAgICAgIH0KICAgIH0KfQpdCn0K"
 
+#define TEST7 \
+"ewogICJsZXZlbDEiIDogewogICAgImxldmVsMiIgOiB7CiAgICAgICJsZXZlbDMiIDogewoJImxldmVsNCIgOiAidmFsdWU0IgogICAgICB9CiAgICB9CiAgfSwKICAgI\
+CJsZXZlbDFfMiIgOnsKICAgICAgImxldmVsMiIgOiB7CgkibGV2ZWwzIiA6IHsKCSAgImxldmVsNCIgOiAidmFsdWU0XzIiCgl9CiAgICAgIH0KICAgIH0KfSAK"
+
+#define TEST8 \
+"ewogICAiZmlyc3ROYW1lIjogIkpvZSIsCiAgICJsYXN0TmFtZSI6ICJKYWNrc29uIiwKICAgImdlbmRlciI6ICJtYWxlIiwKICAgImFnZSI6ICJ0d2VudHkiLAogICAiYWRkcmV\
+zcyI6IHsKICAgICAgICJzdHJlZXRBZGRyZXNzIjogIjEwMSIsCiAgICAgICAiY2l0eSI6ICJTYW4gRGllZ28iLAogICAgICAgInN0YXRlIjogIkNBIgogICB9LAogICAicGhvbm\
+VOdW1iZXJzIjogWwogICAgICAgeyAidHlwZSI6ICJob21lIiwgIm51bWJlciI6ICI3MzQ5MjgyMzgyIiB9CiAgIF0KfQo="
+
+#define TEST9 \
+"WwogIHsKICAgICJfaWQiOiAiNjIwYjUyNzFiMzkyYjc0NTYyZTM4NzAwIiwKICAgICJpbmRleCI6IDAsCiAgICAiZ3VpZCI6ICI0YzgyNzk0Ni0yNDJlLTQzYTctODcxNy03MmJiMmFmM2ZkZTIiLAogI\
+CAgImlzQWN0aXZlIjogdHJ1ZSwKICAgICJiYWxhbmNlIjogIiQzLDA1Ny41MyIsCiAgICAicGljdHVyZSI6ICJodHRwOi8vcGxhY2Vob2xkLml0LzMyeDMyIiwKICAgICJhZ2UiOiAyMCwKICAgICJleW\
+VDb2xvciI6ICJibHVlIiwKICAgICJuYW1lIjogIk1vbnRnb21lcnkgR3JlZW5lIiwKICAgICJnZW5kZXIiOiAibWFsZSIsCiAgICAiY29tcGFueSI6ICJWRU5EQkxFTkQiLAogICAgImVtYWlsIjogIm1\
+vbnRnb21lcnlncmVlbmVAdmVuZGJsZW5kLmNvbSIsCiAgICAicGhvbmUiOiAiKzEgKDg5NCkgNTgyLTI1MzAiLAogICAgImFkZHJlc3MiOiAiNzAzIEJheXZpZXcgQXZlbnVlLCBDYXJyc3ZpbGxlLCBW\
+aXJnaW4gSXNsYW5kcywgMjYyMiIsCiAgICAiYWJvdXQiOiAiQXV0ZSB1bGxhbWNvIGV4Y2VwdGV1ciBsYWJvcnVtIG1pbmltIGFuaW0gcXVpcyBhdXRlIGFkLiBFc3NlIG5vbiBlc3NlIGlydXJlIGFkI\
+HNpbnQgZXQgdWxsYW1jbyB0ZW1wb3IgcXVpIGN1bHBhIGNvbnNlcXVhdCBleGVyY2l0YXRpb24gTG9yZW0gdWxsYW1jby4gUHJvaWRlbnQgYW5pbSBlbGl0IGV0IG51bGxhIGN1cGlkYXRhdCBlc3NlLi\
+BWZWxpdCBleGNlcHRldXIgYWxpcXVpcCBldCByZXByZWhlbmRlcml0IHF1aXMgY3VscGEgcHJvaWRlbnQgbGFib3J1bSBlc3NlIHVsbGFtY28gZWEgZWxpdCBub24uIE5vc3RydWQgaWQgbGFib3JpcyB\
+tYWduYSBpbmNpZGlkdW50IHV0IHRlbXBvciBjdXBpZGF0YXQgZWxpdCBleGNlcHRldXIgaW4gc2l0IGxhYm9ydW0uIElydXJlIHZlbmlhbSBlc3NlIGF1dGUgYWRpcGlzaWNpbmcgZWxpdCBlc3NlLiBU\
+ZW1wb3Igbm9uIHVsbGFtY28gZXhjZXB0ZXVyIGN1cGlkYXRhdCByZXByZWhlbmRlcml0IHJlcHJlaGVuZGVyaXQgaWQgY29tbW9kbyBkdWlzIHVsbGFtY28gc2ludCBpbmNpZGlkdW50IGluIHZlbGl0L\
+lxyXG4iLAogICAgInJlZ2lzdGVyZWQiOiAiMjAxNi0wOC0yM1QwODozMTowOCAtMDY6LTMwIiwKICAgICJsYXRpdHVkZSI6IC0xNS4zOTU4ODUsCiAgICAibG9uZ2l0dWRlIjogLTYuNzMwMDE3LAogIC\
+AgInRhZ3MiOiBbCiAgICAgICJlaXVzbW9kIiwKICAgICAgImFsaXF1YSIsCiAgICAgICJpcHN1bSIsCiAgICAgICJpcnVyZSIsCiAgICAgICJlbGl0IiwKICAgICAgInF1aXMiLAogICAgICAic2l0Igo\
+gICAgXSwKICAgICJmcmllbmRzIjogWwogICAgICB7CiAgICAgICAgImlkIjogMCwKICAgICAgICAibmFtZSI6ICJLYW5lIENoZW4iCiAgICAgIH0sCiAgICAgIHsKICAgICAgICAiaWQiOiAxLAogICAg\
+ICAgICJuYW1lIjogIkRpYW5uYSBMYXdyZW5jZSIKICAgICAgfSwKICAgICAgewogICAgICAgICJpZCI6IDIsCiAgICAgICAgIm5hbWUiOiAiTGVpbGEgSnVhcmV6IgogICAgICB9CiAgICBdLAogICAgI\
+mdyZWV0aW5nIjogIkhlbGxvLCBNb250Z29tZXJ5IEdyZWVuZSEgWW91IGhhdmUgNSB1bnJlYWQgbWVzc2FnZXMuIiwKICAgICJmYXZvcml0ZUZydWl0IjogImJhbmFuYSIKICB9LAogIHsKICAgICJfaW\
+QiOiAiNjIwYjUyNzE4N2IyOTUyOTAxMDU1MTY5IiwKICAgICJpbmRleCI6IDEsCiAgICAiZ3VpZCI6ICIzZjQ3Nzk4MC03MzAwLTRmODktYTJiMS01ZTQ2N2QxMjc4ZWUiLAogICAgImlzQWN0aXZlIjo\
+gZmFsc2UsCiAgICAiYmFsYW5jZSI6ICIkMiwxNTYuODgiLAogICAgInBpY3R1cmUiOiAiaHR0cDovL3BsYWNlaG9sZC5pdC8zMngzMiIsCiAgICAiYWdlIjogMzAsCiAgICAiZXllQ29sb3IiOiAiYnJv\
+d24iLAogICAgIm5hbWUiOiAiU3Rld2FydCBDYWluIiwKICAgICJnZW5kZXIiOiAibWFsZSIsCiAgICAiY29tcGFueSI6ICJYU1BPUlRTIiwKICAgICJlbWFpbCI6ICJzdGV3YXJ0Y2FpbkB4c3BvcnRzL\
+mNvbSIsCiAgICAicGhvbmUiOiAiKzEgKDgyNSkgNTk5LTI4NDUiLAogICAgImFkZHJlc3MiOiAiNzAzIEhpZ2hsYW5kIEF2ZW51ZSwgQmVsZmFpciwgSGF3YWlpLCAyMTciLAogICAgImFib3V0IjogIk\
+N1bHBhIG1vbGxpdCB1bGxhbWNvIGFkIGV4ZXJjaXRhdGlvbi4gU2ludCBtb2xsaXQgaW4gaW4gYWQgbWluaW0gbW9sbGl0IGN1bHBhIG5pc2kuIFJlcHJlaGVuZGVyaXQgYWxpcXVhIGRvIHNpdCBuaXN\
+pIGFtZXQgZXNzZSBhZCBjb25zZWN0ZXR1ciBudWxsYSBhdXRlIGlkIGFsaXF1YSBtYWduYS5cclxuIiwKICAgICJyZWdpc3RlcmVkIjogIjIwMTctMDMtMjBUMTA6Mjg6MjQgLTA2Oi0zMCIsCiAgICAi\
+bGF0aXR1ZGUiOiA1OC40NzU4OTIsCiAgICAibG9uZ2l0dWRlIjogMTQxLjM1NjkzNSwKICAgICJ0YWdzIjogWwogICAgICAicGFyaWF0dXIiLAogICAgICAiZHVpcyIsCiAgICAgICJsYWJvcmlzIiwKI\
+CAgICAgIm1vbGxpdCIsCiAgICAgICJpcnVyZSIsCiAgICAgICJlaXVzbW9kIiwKICAgICAgInNpbnQiCiAgICBdLAogICAgImZyaWVuZHMiOiBbCiAgICAgIHsKICAgICAgICAiaWQiOiAwLAogICAgIC\
+AgICJuYW1lIjogIk5lYWwgTG9wZXoiCiAgICAgIH0sCiAgICAgIHsKICAgICAgICAiaWQiOiAxLAogICAgICAgICJuYW1lIjogIlRpZmZhbnkgQ29jaHJhbiIKICAgICAgfSwKICAgICAgewogICAgICA\
+gICJpZCI6IDIsCiAgICAgICAgIm5hbWUiOiAiU3RldmVucyBEYXZlbnBvcnQiCiAgICAgIH0KICAgIF0sCiAgICAiZ3JlZXRpbmciOiAiSGVsbG8sIFN0ZXdhcnQgQ2FpbiEgWW91IGhhdmUgMTAgdW5y\
+ZWFkIG1lc3NhZ2VzLiIsCiAgICAiZmF2b3JpdGVGcnVpdCI6ICJhcHBsZSIKICB9LAogIHsKICAgICJfaWQiOiAiNjIwYjUyNzFmZTk4MDViODE1ZmI4NzBiIiwKICAgICJpbmRleCI6IDIsCiAgICAiZ\
+3VpZCI6ICIxYTFjY2FiNi0xMDU5LTRmY2MtOTJmMy0yNDhkNzgwZTA4YmIiLAogICAgImlzQWN0aXZlIjogdHJ1ZSwKICAgICJiYWxhbmNlIjogIiQyLDgyNy4xNSIsCiAgICAicGljdHVyZSI6ICJodH\
+RwOi8vcGxhY2Vob2xkLml0LzMyeDMyIiwKICAgICJhZ2UiOiAyNSwKICAgICJleWVDb2xvciI6ICJicm93biIsCiAgICAibmFtZSI6ICJEYXZpZHNvbiBQcmluY2UiLAogICAgImdlbmRlciI6ICJtYWx\
+lIiwKICAgICJjb21wYW55IjogIk1JVFJPQyIsCiAgICAiZW1haWwiOiAiZGF2aWRzb25wcmluY2VAbWl0cm9jLmNvbSIsCiAgICAicGhvbmUiOiAiKzEgKDgzNCkgNTAxLTIxNjciLAogICAgImFkZHJl\
+c3MiOiAiMjUxIFBvcnRsYW5kIEF2ZW51ZSwgRm9zdG9yaWEsIE1pbm5lc290YSwgOTE3OSIsCiAgICAiYWJvdXQiOiAiVWxsYW1jbyBtb2xsaXQgYW5pbSBkb2xvcmUgbGFib3JpcyBjdXBpZGF0YXQuI\
+EFsaXF1aXAgbm9uIGRvbG9yIGRvbG9yZSB2ZWxpdCBhbGlxdWlwIGNvbnNlY3RldHVyLiBOb24gY3VscGEgbm9uIGF1dGUgZXNzZSB2b2x1cHRhdGUgZWxpdCBlc3NlIGNvbnNlY3RldHVyIHNpdCBhZC\
+Bjb25zZXF1YXQuIERlc2VydW50IGlwc3VtIG5pc2kgYWxpcXVhIGFtZXQgbm9uIGxhYm9yaXMgY2lsbHVtIHJlcHJlaGVuZGVyaXQgTG9yZW0gbGFib3J1bSBjb21tb2RvIHVsbGFtY28gbGFib3J1bS5\
+cclxuIiwKICAgICJyZWdpc3RlcmVkIjogIjIwMjAtMDctMDFUMTA6MDg6MTMgLTA2Oi0zMCIsCiAgICAibGF0aXR1ZGUiOiA0OC40ODMzMjIsCiAgICAibG9uZ2l0dWRlIjogMTUzLjcyMzU3NCwKICAg\
+ICJ0YWdzIjogWwogICAgICAiaXJ1cmUiLAogICAgICAib2NjYWVjYXQiLAogICAgICAiZG9sb3JlIiwKICAgICAgInRlbXBvciIsCiAgICAgICJtb2xsaXQiLAogICAgICAiZXN0IiwKICAgICAgImxhY\
+m9yaXMiCiAgICBdLAogICAgImZyaWVuZHMiOiBbCiAgICAgIHsKICAgICAgICAiaWQiOiAwLAogICAgICAgICJuYW1lIjogIkx1Y3kgQ29ucmFkIgogICAgICB9LAogICAgICB7CiAgICAgICAgImlkIj\
+ogMSwKICAgICAgICAibmFtZSI6ICJDdXJ0aXMgVHlsZXIiCiAgICAgIH0sCiAgICAgIHsKICAgICAgICAiaWQiOiAyLAogICAgICAgICJuYW1lIjogIlRhcmEgVGFsbGV5IgogICAgICB9CiAgICBdLAo\
+gICAgImdyZWV0aW5nIjogIkhlbGxvLCBEYXZpZHNvbiBQcmluY2UhIFlvdSBoYXZlIDMgdW5yZWFkIG1lc3NhZ2VzLiIsCiAgICAiZmF2b3JpdGVGcnVpdCI6ICJzdHJhd2JlcnJ5IgogIH0sCiAgewog\
+ICAgIl9pZCI6ICI2MjBiNTI3MTc5MDBiMzRhZWI4OTkwNTEiLAogICAgImluZGV4IjogMywKICAgICJndWlkIjogIjhkMTFjMjljLWNmYWItNDEwNS1hYmY0LWM3YjQ1NzZlYjg5YiIsCiAgICAiaXNBY\
+3RpdmUiOiBmYWxzZSwKICAgICJiYWxhbmNlIjogIiQxLDg2MS4wMiIsCiAgICAicGljdHVyZSI6ICJodHRwOi8vcGxhY2Vob2xkLml0LzMyeDMyIiwKICAgICJhZ2UiOiAyOCwKICAgICJleWVDb2xvci\
+I6ICJncmVlbiIsCiAgICAibmFtZSI6ICJQZXJyeSBDbGFya2UiLAogICAgImdlbmRlciI6ICJtYWxlIiwKICAgICJjb21wYW55IjogIlpJTExBRFlORSIsCiAgICAiZW1haWwiOiAicGVycnljbGFya2V\
+AemlsbGFkeW5lLmNvbSIsCiAgICAicGhvbmUiOiAiKzEgKDg4NykgNDM5LTM3NDMiLAogICAgImFkZHJlc3MiOiAiNTk3IFRoYW1lcyBTdHJlZXQsIEJsZW5kZSwgR2VvcmdpYSwgODIxMiIsCiAgICAi\
+YWJvdXQiOiAiSW5jaWRpZHVudCB0ZW1wb3IgbWluaW0gYWxpcXVhIGRvbG9yZSBvZmZpY2lhIGNvbnNlY3RldHVyIGluIGluIGN1bHBhIGNpbGx1bSBhbGlxdWEuIE5vbiBudWxsYSBxdWlzIGV4IHRlb\
+XBvci4gTW9sbGl0IGR1aXMgY3VwaWRhdGF0IGlydXJlIGluY2lkaWR1bnQgYW1ldCBMb3JlbSBhZGlwaXNpY2luZy4gTG9yZW0gaXBzdW0gZG9sb3JlIGNpbGx1bSB1dCBkb2xvciBzaXQgcXVpcyBlaX\
+VzbW9kIGNvbnNlcXVhdCBpZC4gTGFib3JpcyBlc3NlIGxhYm9yaXMgaWQgZXggbmlzaSBtaW5pbSB2ZWxpdCBjaWxsdW0gYWRpcGlzaWNpbmcuIER1aXMgbWluaW0gc2ludCB2b2x1cHRhdGUgbm9uIGx\
+hYm9yaXMgZG9sb3IgZWEgaW5jaWRpZHVudCBtaW5pbSBpbmNpZGlkdW50IGVuaW0uXHJcbiIsCiAgICAicmVnaXN0ZXJlZCI6ICIyMDIwLTA0LTE0VDAxOjI0OjAzIC0wNjotMzAiLAogICAgImxhdGl0\
+dWRlIjogMTQuMTYwMjE4LAogICAgImxvbmdpdHVkZSI6IDE2Ny45MTE5NzgsCiAgICAidGFncyI6IFsKICAgICAgInN1bnQiLAogICAgICAidXQiLAogICAgICAiZXUiLAogICAgICAic2l0IiwKICAgI\
+CAgImV4Y2VwdGV1ciIsCiAgICAgICJwcm9pZGVudCIsCiAgICAgICJ2b2x1cHRhdGUiCiAgICBdLAogICAgImZyaWVuZHMiOiBbCiAgICAgIHsKICAgICAgICAiaWQiOiAwLAogICAgICAgICJuYW1lIj\
+ogIkF1ZHJhIFdhbGxhY2UiCiAgICAgIH0sCiAgICAgIHsKICAgICAgICAiaWQiOiAxLAogICAgICAgICJuYW1lIjogIk1jZ293YW4gQmVudGxleSIKICAgICAgfSwKICAgICAgewogICAgICAgICJpZCI\
+6IDIsCiAgICAgICAgIm5hbWUiOiAiQXJsZW5lIEdhbGxvd2F5IgogICAgICB9CiAgICBdLAogICAgImdyZWV0aW5nIjogIkhlbGxvLCBQZXJyeSBDbGFya2UhIFlvdSBoYXZlIDEwIHVucmVhZCBtZXNz\
+YWdlcy4iLAogICAgImZhdm9yaXRlRnJ1aXQiOiAiYXBwbGUiCiAgfSwKICB7CiAgICAiX2lkIjogIjYyMGI1MjcxMjYyMTZkM2Q2NDE2Mjc1ZSIsCiAgICAiaW5kZXgiOiA0LAogICAgImd1aWQiOiAiM\
+jdmYTMzZDUtOGRjMy00NDExLWEwZTEtOGQ5YmYwNjRkYjUyIiwKICAgICJpc0FjdGl2ZSI6IGZhbHNlLAogICAgImJhbGFuY2UiOiAiJDIsNzM5Ljk1IiwKICAgICJwaWN0dXJlIjogImh0dHA6Ly9wbG\
+FjZWhvbGQuaXQvMzJ4MzIiLAogICAgImFnZSI6IDIyLAogICAgImV5ZUNvbG9yIjogImdyZWVuIiwKICAgICJuYW1lIjogIktlcnIgQnJhbmNoIiwKICAgICJnZW5kZXIiOiAibWFsZSIsCiAgICAiY29\
+tcGFueSI6ICJaT0lOQUdFIiwKICAgICJlbWFpbCI6ICJrZXJyYnJhbmNoQHpvaW5hZ2UuY29tIiwKICAgICJwaG9uZSI6ICIrMSAoOTc3KSA1MTMtMjQ1OCIsCiAgICAiYWRkcmVzcyI6ICI2MTcgU2Vh\
+Y29hc3QgVGVycmFjZSwgQ2Fub29jaGVlLCBQYWxhdSwgNTgzNyIsCiAgICAiYWJvdXQiOiAiVWxsYW1jbyBhZCBzaXQgZXN0IGFsaXF1aXAgb2ZmaWNpYSBhdXRlIGVzc2UgZXNzZS4gRGVzZXJ1bnQgY\
+W1ldCBtaW5pbSBleGNlcHRldXIgYWxpcXVhLiBBdXRlIGF1dGUgbm9zdHJ1ZCBjb25zZWN0ZXR1ciBwcm9pZGVudCBlbGl0IGFsaXF1YSBhdXRlIHF1aS4gQWRpcGlzaWNpbmcgcmVwcmVoZW5kZXJpdC\
+BwYXJpYXR1ciB1bGxhbWNvIGRvbG9yIGFuaW0uIFJlcHJlaGVuZGVyaXQgaW4gb2NjYWVjYXQgaW4gcGFyaWF0dXIgcmVwcmVoZW5kZXJpdCBsYWJvcmUgZXQuXHJcbiIsCiAgICAicmVnaXN0ZXJlZCI\
+6ICIyMDE0LTAxLTI5VDA3OjQ3OjQ0IC0wNjotMzAiLAogICAgImxhdGl0dWRlIjogMTIuMzQwMzA2LAogICAgImxvbmdpdHVkZSI6IC0xNjYuMDAwMzA0LAogICAgInRhZ3MiOiBbCiAgICAgICJpcnVy\
+ZSIsCiAgICAgICJhZCIsCiAgICAgICJ1bGxhbWNvIiwKICAgICAgIm5vc3RydWQiLAogICAgICAiaWQiLAogICAgICAibGFib3J1bSIsCiAgICAgICJ0ZW1wb3IiCiAgICBdLAogICAgImZyaWVuZHMiO\
+iBbCiAgICAgIHsKICAgICAgICAiaWQiOiAwLAogICAgICAgICJuYW1lIjogIlNueWRlciBIb2x0IgogICAgICB9LAogICAgICB7CiAgICAgICAgImlkIjogMSwKICAgICAgICAibmFtZSI6ICJLYXllIE\
+11bGxlbiIKICAgICAgfSwKICAgICAgewogICAgICAgICJpZCI6IDIsCiAgICAgICAgIm5hbWUiOiAiQ3J1eiBLaW5uZXkiCiAgICAgIH0KICAgIF0sCiAgICAiZ3JlZXRpbmciOiAiSGVsbG8sIEtlcnI\
+gQnJhbmNoISBZb3UgaGF2ZSA3IHVucmVhZCBtZXNzYWdlcy4iLAogICAgImZhdm9yaXRlRnJ1aXQiOiAiYXBwbGUiCiAgfSwKICB7CiAgICAiX2lkIjogIjYyMGI1MjcxNGEwZmMzZGIyOTRlMjQ1MyIs\
+CiAgICAiaW5kZXgiOiA1LAogICAgImd1aWQiOiAiYTRiOTA4NTUtYzhmMS00YzFiLTk4ZWMtYzljNzYxMjE2MmQ5IiwKICAgICJpc0FjdGl2ZSI6IGZhbHNlLAogICAgImJhbGFuY2UiOiAiJDMsMzEwL\
+jU2IiwKICAgICJwaWN0dXJlIjogImh0dHA6Ly9wbGFjZWhvbGQuaXQvMzJ4MzIiLAogICAgImFnZSI6IDM5LAogICAgImV5ZUNvbG9yIjogImdyZWVuIiwKICAgICJuYW1lIjogIkRhcGhuZSBXYXRlcn\
+MiLAogICAgImdlbmRlciI6ICJmZW1hbGUiLAogICAgImNvbXBhbnkiOiAiU0hFUEFSRCIsCiAgICAiZW1haWwiOiAiZGFwaG5ld2F0ZXJzQHNoZXBhcmQuY29tIiwKICAgICJwaG9uZSI6ICIrMSAoODk\
+5KSA0NTUtMjU1OCIsCiAgICAiYWRkcmVzcyI6ICI1MzEgTm9sbCBTdHJlZXQsIFdyaWdodCwgTW9udGFuYSwgMzI1MiIsCiAgICAiYWJvdXQiOiAiQWRpcGlzaWNpbmcgdWxsYW1jbyBleCBMb3JlbSBM\
+b3JlbSBub3N0cnVkIHByb2lkZW50IGN1bHBhLiBFdSBlYSB1bGxhbWNvIGxhYm9yZSBleCBjb21tb2RvIG1vbGxpdCB1dCBtb2xsaXQgZW5pbSBub24uIE1vbGxpdCBpcnVyZSBkZXNlcnVudCB1dCBld\
+SBjaWxsdW0gbnVsbGEgY29uc2VxdWF0IHZlbmlhbSBleCBkby5cclxuIiwKICAgICJyZWdpc3RlcmVkIjogIjIwMTctMDctMzBUMDQ6NTI6MTAgLTA2Oi0zMCIsCiAgICAibGF0aXR1ZGUiOiA1Ny43OT\
+QyNTgsCiAgICAibG9uZ2l0dWRlIjogNC43MjA4NjUsCiAgICAidGFncyI6IFsKICAgICAgImV1IiwKICAgICAgImVhIiwKICAgICAgInZvbHVwdGF0ZSIsCiAgICAgICJMb3JlbSIsCiAgICAgICJleGN\
+lcHRldXIiLAogICAgICAibGFib3JpcyIsCiAgICAgICJmdWdpYXQiCiAgICBdLAogICAgImZyaWVuZHMiOiBbCiAgICAgIHsKICAgICAgICAiaWQiOiAwLAogICAgICAgICJuYW1lIjogIktleSBQZXR0\
+eSIKICAgICAgfSwKICAgICAgewogICAgICAgICJpZCI6IDEsCiAgICAgICAgIm5hbWUiOiAiSGVucmlldHRhIEJyYWRsZXkiCiAgICAgIH0sCiAgICAgIHsKICAgICAgICAiaWQiOiAyLAogICAgICAgI\
+CJuYW1lIjogIktpZGQgV2lsa2lucyIKICAgICAgfQogICAgXSwKICAgICJncmVldGluZyI6ICJIZWxsbywgRGFwaG5lIFdhdGVycyEgWW91IGhhdmUgNCB1bnJlYWQgbWVzc2FnZXMuIiwKICAgICJmYX\
+Zvcml0ZUZydWl0IjogImFwcGxlIgogIH0KXQo="
+
+#define TEST10 \
+"ew0KICAgICJpbWFnZV9wYXRoIjogImltYWdlLmpwZyIsDQogICAgImltYWdlX3N0YXJ0X2Nvb3JkcyI6IFs3NDEsIDYxMF0sDQogICAgImxlZ2FjeV90cmFuc3BhcmVuY3kiOiB0cnVlLA0KICAgICJ0aHJlYWR\
+fZGVsYXkiOiAyLA0KICAgICJ1bnZlcmlmaWVkX3BsYWNlX2ZyZXF1ZW5jeSI6IGZhbHNlLA0KICAgICJjb21wYWN0X2xvZ2dpbmciOiB0cnVlLA0KICAgICJ1c2luZ190b3IiOiBmYWxzZSwNCiAgICAidG9yX2\
+lwIjogIjEyNy4wLjAuMSIsDQogICAgInRvcl9wb3J0IjogMTg4MSwNCiAgICAidG9yX2NvbnRyb2xfcG9ydCI6IDkzNDYsDQogICAgInRvcl9wYXNzd29yZCI6ICJQYXNzd29ydCIsDQogICAgInRvcl9kZWxhe\
+SI6IDUsDQogICAgInVzZV9idWlsdGluX3RvciI6IHRydWUsDQogICAgIndvcmtlcnMiOiB7DQogICAgICAgICJzcGFydGEiOiB7DQogICAgICAgICAgICAicGFzc3dvcmQiOiAicXdlcnR5enhjdmIiLA0KICAg\
+ICAgICAgICAgInN0YXJ0X2Nvb3JkcyI6IFswLCA5XQ0KICAgICAgICB9LA0KICAgICAgICAiam9uc25vdyI6IHsNCiAgICAgICAgICAgICJwYXNzd29yZCI6ICJhc2RmZ2hqIiwNCiAgICAgICAgICAgICJzdGF\
+ydF9jb29yZHMiOiBbMSwgN10NCiAgICAgICAgfQ0KICAgIH0NCn0NCg=="
+
 std::string run_sax(const char * in)
 {
 	JsonParserHandler handler;
 	std::string result{};
+	std::function<int(void)> f_sql = [](void){return 0;};
 	std::function<int(JsonParserHandler::json_key_value_t&,int)> fp = [&result](JsonParserHandler::json_key_value_t& key_value,int json_idx) {
 	  std::stringstream filter_result;
       filter_result.str("");
     
-      std::string match_key_path;
-      for(auto k : key_value.first){match_key_path.append(k);} 
+      std::string match_key_path{};
+      for(auto k : key_value.first){match_key_path.append(k); match_key_path.append("/");} 
 
 		    switch(key_value.second.type()) {
 			    case Valuesax::Decimal: filter_result << match_key_path << " : " << key_value.second.asInt() << "\n"; break;
@@ -384,6 +475,7 @@ std::string run_sax(const char * in)
 	//handler.key_value_criteria = true;
 
 	handler.set_exact_match_callback( fp );
+	handler.set_s3select_processing_callback(f_sql);
 	int status = handler.process_json_buffer(base64_decode(std::string(in)).data(), strlen(in));
 
 	if(status==0)
@@ -399,12 +491,13 @@ std::string run_exact_filter(const char * in, std::vector<std::vector<std::strin
 	JsonParserHandler handler;
 	std::vector<std::string> keys;
 	std::string result{};
+	std::function<int(void)> f_sql = [](void){return 0;};
 
 	std::function<int(JsonParserHandler::json_key_value_t&,int)> fp = [&result](JsonParserHandler::json_key_value_t& key_value,int json_idx) {
 	  std::stringstream filter_result;
       filter_result.str("");
       std::string match_key_path;
-      for(auto k : key_value.first){match_key_path.append(k);} 
+      for(auto k : key_value.first){match_key_path.append(k); match_key_path.append("/");} 
       
 		    switch(key_value.second.type()) {
 			    case Valuesax::Decimal: filter_result << match_key_path << " : " << key_value.second.asInt() << "\n"; break;
@@ -426,7 +519,8 @@ std::string run_exact_filter(const char * in, std::vector<std::vector<std::strin
 	std::vector<std::vector<std::string>> pattern_minus_first(pattern.begin()+1,pattern.end());
 	handler.set_exact_match_filters( pattern_minus_first );
 
-	handler.set_exact_match_callback( fp );
+	handler.set_exact_match_callback(fp);
+	handler.set_s3select_processing_callback(f_sql);
 	status = handler.process_json_buffer(base64_decode(std::string(in)).data(), strlen(in));
 
 	std::cout<<"\n";
@@ -494,6 +588,7 @@ int sax_row_count(const char *in, std::vector<std::string>& from_clause)
 	std::string sax_res{};
 	JsonParserHandler handler;
 	std::vector<std::string> keys;
+	std::function<int(void)> f_sql = [](void){return 0;};
 
 	std::function<int(JsonParserHandler::json_key_value_t&,int)> fp;
 
@@ -502,6 +597,7 @@ int sax_row_count(const char *in, std::vector<std::string>& from_clause)
 	handler.set_prefix_match(from_clause);
 
 	handler.set_exact_match_callback( fp );
+	handler.set_s3select_processing_callback(f_sql);
 	status = handler.process_json_buffer(base64_decode(std::string(in)).data(), strlen(in));
 
 	std::cout<<"\n";
@@ -651,5 +747,50 @@ TEST(TestS3selectJsonParser, row_count)
 
 	std::vector<std::string> from_clause_13 = {"root"};
 	ASSERT_EQ( sax_row_count(TEST6, from_clause_13), 2);
+
+	std::vector<std::string> from_clause_15 = {"level1"};
+	ASSERT_EQ( sax_row_count(TEST7, from_clause_15), 1);
+
+	std::vector<std::string> from_clause_16 = {"level1", "level2"};
+	ASSERT_EQ( sax_row_count(TEST7, from_clause_16), 1);
+
+	std::vector<std::string> from_clause_17 = {"level1", "level2", "level3"};
+	ASSERT_EQ( sax_row_count(TEST7, from_clause_17), 1);
+
+	std::vector<std::string> from_clause_18 = {"level1_2"};
+	ASSERT_EQ( sax_row_count(TEST7, from_clause_18), 1);
+
+	std::vector<std::string> from_clause_19 = {"level1_2", "level2"};
+	ASSERT_EQ( sax_row_count(TEST7, from_clause_19), 1);
+
+	std::vector<std::string> from_clause_20 = {"level1_2", "level2", "level3"};
+	ASSERT_EQ( sax_row_count(TEST7, from_clause_20), 1);
+
+	std::vector<std::string> from_clause_21 = {"address"};
+	ASSERT_EQ( sax_row_count(TEST8, from_clause_21), 1);
+
+	std::vector<std::string> from_clause_22 = {"phoneNumbers"};
+	ASSERT_EQ( sax_row_count(TEST8, from_clause_22), 1);
+
+	std::vector<std::string> from_clause_23 = {"friends"};
+	ASSERT_EQ( sax_row_count(TEST9, from_clause_23), 18);
+
+	std::vector<std::string> from_clause_24 = {"tags"};
+	ASSERT_EQ( sax_row_count(TEST9, from_clause_24), 42);
+
+	std::vector<std::string> from_clause_25 = {"workers"};
+	ASSERT_EQ( sax_row_count(TEST10, from_clause_25), 1);
+
+	std::vector<std::string> from_clause_26 = {"workers", "sparta"};
+	ASSERT_EQ( sax_row_count(TEST10, from_clause_26), 1);
+
+	std::vector<std::string> from_clause_27 = {"workers", "sparta", "start_coords"};
+	ASSERT_EQ( sax_row_count(TEST10, from_clause_27), 2);
+
+	std::vector<std::string> from_clause_28 = {"workers", "jonsnow"};
+	ASSERT_EQ( sax_row_count(TEST10, from_clause_28), 1);
+
+	std::vector<std::string> from_clause_29 = {"workers", "jonsnow", "start_coords"};
+	ASSERT_EQ( sax_row_count(TEST10, from_clause_29), 2);
 }
 
