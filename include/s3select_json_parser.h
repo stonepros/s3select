@@ -18,6 +18,7 @@ bool s3select_json_parse_error(const char* error);
 #include <iostream>
 #include <functional>
 #include <boost/spirit/include/classic_core.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include "s3select_oper.h"//class value
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -173,7 +174,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     std::function<int(void)> m_s3select_processing;
     bool m_end_of_chunk;
 
-    JsonParserHandler() : init_buffer_stream(false),m_end_of_chunk(false)
+    JsonParserHandler() : prefix_match(false),init_buffer_stream(false),m_end_of_chunk(false)
     {} 
 
     std::string get_key_path()
@@ -271,7 +272,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     bool Key(const char* str, rapidjson::SizeType length, bool copy) {
       key_path.push_back(std::string(str));
       
-      if (key_path == from_clause || from_clause.size()==0) {
+      if(from_clause.size() == 0 || std::equal(key_path.begin(), key_path.end(), from_clause.begin(), from_clause.end(), iequal_predicate)) {
         prefix_match = true;
       }
       return true;
@@ -319,9 +320,9 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       return true;
     }
 
-    void set_prefix_match(std::vector<std::string>& prefix_match)
+    void set_prefix_match(std::vector<std::string>& requested_prefix_match)
     {//purpose: set the filter according to SQL statement(from clause)
-      from_clause = prefix_match;
+      from_clause = requested_prefix_match;
     }
 
     void set_exact_match_filters(std::vector <std::vector<std::string>>& exact_match_filters)
