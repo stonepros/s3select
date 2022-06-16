@@ -2527,7 +2527,7 @@ private:
       std::cout << s3select_result;
       s3select_result.clear();
 
-      return 0;
+      return status;
   }
 
   int push_into_scratch_area_cb(JsonParserHandler::json_key_value_t& key_value,int json_var_idx)
@@ -2566,10 +2566,11 @@ public:
 
     m_processed_bytes += stream_length;
 
-    if(!stream_length)//TODO m_processed_bytes(?)
+    if(!stream_length || !stream_length)//TODO m_processed_bytes(?)
     {
-      m_end_of_stream = true;
       JsonHandler.process_json_buffer(0, 0, true);//TODO end-of-stream = end-of-row
+      m_end_of_stream = true;
+      sql_execution_on_row_cb();
       return 0;
     }
 

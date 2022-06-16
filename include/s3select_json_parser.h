@@ -12,9 +12,14 @@
 #include <vector>
 #include <iostream>
 #include <functional>
-//#include "s3select.h"
 #include <boost/spirit/include/classic_core.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include "s3select_oper.h"//class value
+
+static auto iequal_predicate = [](std::string& it1, std::string& it2)
+			  {
+			    return boost::iequals(it1,it2);
+			  };
 
 //TODO namespace 
 class Valuesax {
@@ -236,7 +241,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     std::vector <std::vector<std::string>> query_matrix{};
     int row_count{};
     std::vector <std::string> from_clause{};
-    bool prefix_match{};
+    bool prefix_match;
     Valuesax value;
     ChunksStreamer stream_buffer;
     bool init_buffer_stream;
@@ -247,7 +252,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     std::function<int(void)> m_s3select_processing;
     bool m_end_of_chunk;
 
-    JsonParserHandler() : init_buffer_stream(false),m_end_of_chunk(false)
+    JsonParserHandler() : prefix_match(false),init_buffer_stream(false),m_end_of_chunk(false)
     {} 
 
     std::string get_key_path()
@@ -288,16 +293,9 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
 
       //std::cout << get_key_path() << std::endl;
 
-      auto predicate = [](std::string& it1, std::string& it2)
-			  {
-			    boost::to_upper(it1);
-			    boost::to_upper(it2);
-			    return it1 == it2;
-			  };
-
       if (prefix_match) {
         for (auto filter : query_matrix) {
-          if(std::equal(key_path.begin() + from_clause.size(), key_path.end(), filter.begin(),predicate)) {
+          if(std::equal(key_path.begin() + from_clause.size(), key_path.end(), filter.begin(),iequal_predicate)) {
 	    //TODO very intensove not need for key-path
 	    JsonParserHandler::json_key_value_t found_variable(key_path,v);
             m_exact_match_cb(found_variable, json_idx);
@@ -346,7 +344,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     bool Key(const char* str, rapidjson::SizeType length, bool copy) {
       key_path.push_back(std::string(str));
       
-      if (key_path == from_clause || from_clause.size()==0) {
+      if(from_clause.size() == 0 || std::equal(key_path.begin(), key_path.end(), from_clause.begin(), from_clause.end(), iequal_predicate)) {
         prefix_match = true;
       }
       return true;
@@ -400,9 +398,9 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       return true;
     }
 
-    void set_prefix_match(std::vector<std::string>& prefix_match)
+    void set_prefix_match(std::vector<std::string>& requested_prefix_match)
     {//purpose: set the filter according to SQL statement(from clause)
-      from_clause = prefix_match;
+      from_clause = requested_prefix_match;
     }
 
     void set_exact_match_filters(std::vector <std::vector<std::string>>& exact_match_filters)
