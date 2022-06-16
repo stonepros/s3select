@@ -6,7 +6,7 @@
 #include <vector>
 #include <filesystem>
 #include <iostream>
-
+#include <boost/algorithm/string/predicate.hpp>
 
 // ===== base64 encode/decode
 
@@ -628,15 +628,15 @@ row/color/ : magenta
 row/color/ : yellow
 row/color/ : black
 )";
-	ASSERT_EQ( sax_exact_filter(TEST2, input), result_0);
+	ASSERT_EQ( boost::iequals(sax_exact_filter(TEST2, input), result_0),true);
 
 	std::vector<std::vector<std::string>> input1 = {{"nested_obj"}, {"hello2"}};
 	std::string result = "nested_obj/hello2/ : world\n";
-	ASSERT_EQ( sax_exact_filter(TEST3, input1), result);
+	ASSERT_EQ(boost::iequals(sax_exact_filter(TEST3, input1), result),true);
 
 	std::vector<std::vector<std::string>> input2 = {{"nested_obj"}, {"nested2", "c1"}};
 	std::string result_1 = "nested_obj/nested2/c1/ : c1_value\n";
-	ASSERT_EQ( sax_exact_filter(TEST3, input2), result_1);
+	ASSERT_EQ(boost::iequals(sax_exact_filter(TEST3, input2), result_1),true);
 	
 	std::vector<std::vector<std::string>> input3 = {{"nested_obj"}, {"nested2", "array_nested2"}};
 	std::string result_2 = R"(nested_obj/nested2/array_nested2/ : 10
@@ -644,7 +644,7 @@ nested_obj/nested2/array_nested2/ : 20
 nested_obj/nested2/array_nested2/ : 30
 nested_obj/nested2/array_nested2/ : 40
 )";
-	ASSERT_EQ( sax_exact_filter(TEST3, input3), result_2);
+	ASSERT_EQ(boost::iequals(sax_exact_filter(TEST3, input3), result_2),true);
 
 	std::vector<std::vector<std::string>> input4 = {{"nested_obj"}, {"nested2", "c1"}, {"nested2", "array_nested2"}};
 	std::string result_3 = R"(nested_obj/nested2/c1/ : c1_value
@@ -653,13 +653,13 @@ nested_obj/nested2/array_nested2/ : 20
 nested_obj/nested2/array_nested2/ : 30
 nested_obj/nested2/array_nested2/ : 40
 )";
-	ASSERT_EQ( sax_exact_filter(TEST3, input4), result_3);
+	ASSERT_EQ( boost::iequals(sax_exact_filter(TEST3, input4), result_3),true);
 	
 	std::vector<std::vector<std::string>> input5 = {{"nested_obj", "nested3"}, {"nested4", "c1"}, {"hello3"}};
 	std::string result_4 = R"(nested_obj/nested3/hello3/ : world
 nested_obj/nested3/nested4/c1/ : c1_value
 )";
-	ASSERT_EQ( sax_exact_filter(TEST3, input5), result_4);
+	ASSERT_EQ( boost::iequals(sax_exact_filter(TEST3, input5), result_4),true);
 
 	std::vector<std::vector<std::string>> input6 = {{"nested_obj", "nested3"}, {"t2"}, {"nested4", "array_nested3"}};
 	std::string result_5 = R"(nested_obj/nested3/t2/ : true
@@ -668,30 +668,30 @@ nested_obj/nested3/nested4/array_nested3/ : 200
 nested_obj/nested3/nested4/array_nested3/ : 300
 nested_obj/nested3/nested4/array_nested3/ : 400
 )";
-	ASSERT_EQ( sax_exact_filter(TEST3, input6), result_5);
+	ASSERT_EQ( boost::iequals(sax_exact_filter(TEST3, input6), result_5),true);
 
 	std::vector<std::vector<std::string>> input7 = {{"glossary"}, {"title"}};
 	std::string result_6 = "glossary/title/ : example glossary\n";
-	ASSERT_EQ( sax_exact_filter(TEST4, input7), result_6);
+	ASSERT_EQ( boost::iequals(sax_exact_filter(TEST4, input7), result_6),true);
 
 	std::vector<std::vector<std::string>> input8 = {{"glossary"}, {"title"}, {"GlossDiv", "title"}};
 	std::string result_7 = R"(glossary/title/ : example glossary
 glossary/GlossDiv/title/ : S
 )";
-	ASSERT_EQ( sax_exact_filter(TEST4, input8), result_7);
+	ASSERT_EQ( boost::iequals(sax_exact_filter(TEST4, input8), result_7),true);
 
 	std::vector<std::vector<std::string>> input9 = {{"glossary", "GlossDiv"}, {"GlossList", "GlossEntry", "GlossDef", "para"}, {"GlossList", "GlossEntry", "GlossDef", "GlossSeeAlso"}};
 	std::string result_8 = R"(glossary/GlossDiv/GlossList/GlossEntry/GlossDef/para/ : A meta-markup language, used to create markup languages such as DocBook.
 glossary/GlossDiv/GlossList/GlossEntry/GlossDef/GlossSeeAlso/ : GML
 glossary/GlossDiv/GlossList/GlossEntry/GlossDef/GlossSeeAlso/ : XML
 )";
-	ASSERT_EQ( sax_exact_filter(TEST4, input9), result_8);
+	ASSERT_EQ( boost::iequals(sax_exact_filter(TEST4, input9), result_8),true);
 
 	std::vector<std::vector<std::string>> input10 = {{"glossary", "GlossDiv"}, {"GlossList", "GlossEntry", "GlossDef", "postarray", "a"}, {"GlossList", "GlossEntry", "GlossSee"}};
 	std::string result_9 = R"(glossary/GlossDiv/GlossList/GlossEntry/GlossDef/postarray/a/ : 111
 glossary/GlossDiv/GlossList/GlossEntry/GlossSee/ : markup
 )";
-	ASSERT_EQ( sax_exact_filter(TEST5, input10), result_9);
+	ASSERT_EQ( boost::iequals(sax_exact_filter(TEST5, input10), result_9),true);
 }
 
 TEST(TestS3selectJsonParser, iterativeParse)
@@ -700,8 +700,8 @@ TEST(TestS3selectJsonParser, iterativeParse)
     {
       std::string result;
       int status = RGW_send_data(getenv("JSON_FILE"), result);
+      ASSERT_EQ(status, 0);
     }
-
 }
 
 TEST(TestS3selectJsonParser, row_count)
