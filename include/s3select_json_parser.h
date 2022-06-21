@@ -16,105 +16,6 @@
 #include <boost/spirit/include/classic_core.hpp>
 #include "s3select_oper.h"//class value
 
-//TODO namespace 
-class Valuesax {
-//TODO replace with s3select::value
-  public:
-
-    enum Type {
-      Decimal,
-      Double,
-      String,
-      Bool,
-      Null
-    };
-
-  private:
-
-    Type _type;
-    double _double;
-    std::string _string;
-    bool _bool;
-    int64_t _num;;
-    std::nullptr_t _null;
-
-  public:
-
-    Valuesax(): _type(Decimal), _double(0.0), _bool(false),_num(0) {}
-
-    Valuesax& Parse(std::string const& s) {
-      _type = Valuesax::String;
-      _string = s;
-      return *this;
-    }
-
-    Valuesax& Parse(const double& s) {
-      _type = Valuesax::Double;
-      _double = s;
-      return *this;
-    }
-
-    Valuesax& Parse(bool& s) {
-      _type = Valuesax::Bool;
-      _bool = s;
-      return *this;
-    }
-
-    Valuesax& Parse(const int& s) {
-      _type = Valuesax::Decimal;
-      _num = s;
-      return *this;
-    }
-
-    Valuesax& Parse(const unsigned& s) {
-      _type = Valuesax::Decimal;
-      _num = s;
-      return *this;
-    }
-
-    Valuesax& Parse(const int64_t& s) {
-      _type = Valuesax::Decimal;
-      _num = s;
-      return *this;
-    }
-
-    Valuesax& Parse(const uint64_t& s) {
-      _type = Valuesax::Decimal;
-      _num = s;
-      return *this;
-    }
-
-    Valuesax& Parse(const std::nullptr_t& s) {
-      _type = Valuesax::Null;
-      _null = s;
-      return *this;
-    }
-
-
-    Type type() const { return _type; }
-
-    int64_t asInt() const {
-      assert(_type == Decimal && "not an int");
-      return _num;
-    }
-
-    double asDouble() const {
-      assert(_type == Double && "not a double");
-      return _double;
-    }
-
-    std::string const& asString() const {
-      assert(_type == String && "not a string");
-      return _string;
-    }
-
-    bool asBool() const {
-      assert(_type == Bool && "not a bool");
-      return _bool;
-    }
-
-};
-
 class ChunksStreamer : public rapidjson::MemoryStream {
 
   //purpose: adding a method `resetBuffer` that enables to parse chunk after chunk
@@ -216,16 +117,13 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
 
     typedef enum {OBJECT_STATE,ARRAY_STATE} en_json_elm_state_t;
 
-    typedef std::pair<std::vector<std::string>, Valuesax> json_key_value_t;
+    typedef std::pair<std::vector<std::string>, s3selectEngine::value> json_key_value_t;
 
     enum class row_state
     {
       NA,
-      ARRAY,
-      START_ROW,
       OBJECT_START_ROW,
       ARRAY_START_ROW,
-      ARRAY_END_ROW,
       END_ROW
     };
 
@@ -237,7 +135,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     int row_count{};
     std::vector <std::string> from_clause{};
     bool prefix_match{};
-    Valuesax value;
+    s3selectEngine::value var_value;
     ChunksStreamer stream_buffer;
     bool init_buffer_stream;
     rapidjson::Reader reader;
@@ -273,17 +171,17 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       
       if (key_path.size() < from_clause.size()) {
         prefix_match = false;
+        state = row_state::END_ROW;
       } 
       else if (prefix_match) {
-          if (state == row_state::ARRAY || state == row_state::START_ROW) {
-            state = row_state::START_ROW;
+          if (state == row_state::ARRAY_START_ROW) {
 	    m_s3select_processing();
             ++row_count;
           }
       }
     }
 
-    void push_new_key_value(Valuesax& v)
+    void push_new_key_value(s3selectEngine::value& v)
     { int json_idx =0; 
 
       //std::cout << get_key_path() << std::endl;
@@ -310,36 +208,44 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
 
     bool Null() {
       // at this point should verify against from-clause/where-clause/project. if match then push to scratch-area
-      push_new_key_value(value.Parse(nullptr));
+      var_value.setnull();
+      push_new_key_value(var_value);
       return true; }
 
     bool Bool(bool b) {
-      push_new_key_value(value.Parse(b));
+      var_value = b;
+      push_new_key_value(var_value);
       return true; }
 
     bool Int(int i) { 
-      push_new_key_value(value.Parse(i));
+      var_value = i;
+      push_new_key_value(var_value);
       return true; }
 
     bool Uint(unsigned u) {
-      push_new_key_value(value.Parse(u));
+      var_value = u;
+      push_new_key_value(var_value);
       return true; }
 
     bool Int64(int64_t i) { 
-      push_new_key_value(value.Parse(i));
+      var_value = i;
+      push_new_key_value(var_value);
       return true; }
 
     bool Uint64(uint64_t u) { 
-      push_new_key_value(value.Parse(u));
+      var_value = u;
+      push_new_key_value(var_value);
       return true; }
 
     bool Double(double d) { 
-      push_new_key_value(value.Parse(d));
+      var_value = d;
+      push_new_key_value(var_value);
       return true; }
 
     bool String(const char* str, rapidjson::SizeType length, bool copy) {
       //TODO use copy
-      push_new_key_value(value.Parse(str));
+      var_value = str;
+      push_new_key_value(var_value);
       return true;
     }
 
@@ -355,15 +261,13 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     bool StartObject() {      
       if (key_path.size()) {
         if (prefix_match && from_clause.size() && (key_path[key_path.size() -1] == from_clause[from_clause.size() - 1])) {
-          if (state != row_state::ARRAY && state != row_state::ARRAY_END_ROW) {
           state = row_state::OBJECT_START_ROW;
           ++row_count;
-        } else {
-          state = row_state::ARRAY_START_ROW;
-          ++row_count;
-          }
         }
       }
+      if (!key_path.size()) {
+          state = row_state::END_ROW;
+        }
 
       json_element_state.push_back(OBJECT_STATE);
       return true; 
@@ -373,20 +277,15 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       json_element_state.pop_back();
       dec_key_path();
       if (state == row_state::OBJECT_START_ROW) {
-        state = row_state::END_ROW;
 	m_s3select_processing();
       }
-      if (state == row_state::ARRAY_START_ROW) {
-        state = row_state::ARRAY_END_ROW;
-	m_s3select_processing();
-       }
       return true; 
     }
  
     bool StartArray() {
       json_element_state.push_back(ARRAY_STATE);
       if (prefix_match && from_clause.size() && (key_path[key_path.size() - 1] == from_clause[from_clause.size() - 1])) {
-          state = row_state::ARRAY;
+          state = row_state::ARRAY_START_ROW;
         }
       return true;
     }

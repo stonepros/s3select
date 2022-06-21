@@ -2535,20 +2535,20 @@ private:
     //upon exact-filter match push value to scratch area with json-idx ,  it should match variable
     //push (key path , json-var-idx , value) json-var-idx should be attached per each exact filter
     value v; 
-    switch(key_value.second.type()) {
-      case Valuesax::Decimal: 
-	v=key_value.second.asInt();
+    switch(key_value.second._type()) {
+      case value::value_En_t::DECIMAL: 
+	v=key_value.second.i64();
       break;
-      case Valuesax::Double:  
-	v=key_value.second.asDouble();
+      case value::value_En_t::FLOAT:  
+	v=key_value.second.dbl();
       break;
-      case Valuesax::String:  
-	v=key_value.second.asString().data();
+      case value::value_En_t::STRING:  
+	v=key_value.second.str();
       break;
-      case Valuesax::Bool:  
-	v=key_value.second.asBool();
+      case value::value_En_t::BOOL:  
+	v=key_value.second.bl();
       break;
-      case Valuesax::Null: 
+      case value::value_En_t::S3NULL: 
 	v.setnull();
       default:
       break;
