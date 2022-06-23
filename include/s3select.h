@@ -620,8 +620,7 @@ public:
 
       projections = projection_expression >> *( ',' >> projection_expression) ;
 
-      projection_expression = (when_case_else_projection|when_case_value_when) [BOOST_BIND_ACTION(push_projection)] | 
-                              (arithmetic_expression >> S3SELECT_KW("as") >> alias_name)[BOOST_BIND_ACTION(push_alias_projection)] | 
+      projection_expression = (arithmetic_expression >> S3SELECT_KW("as") >> alias_name)[BOOST_BIND_ACTION(push_alias_projection)] | 
                               (arithmetic_expression)[BOOST_BIND_ACTION(push_projection)] | 
 			      (arithmetic_predicate >> S3SELECT_KW("as") >> alias_name)[BOOST_BIND_ACTION(push_alias_projection)] |
                               (arithmetic_predicate)[BOOST_BIND_ACTION(push_projection)] ;
@@ -689,16 +688,18 @@ public:
       mulldiv_operand = arithmetic_argument | ('(' >> (arithmetic_expression) >> ')') ;
 
       list_of_function_arguments = (arithmetic_expression)[BOOST_BIND_ACTION(push_function_arg)] >> *(',' >> (arithmetic_expression)[BOOST_BIND_ACTION(push_function_arg)]);
-      
-      function = ((variable >> '(' )[BOOST_BIND_ACTION(push_function_name)] >> !list_of_function_arguments >> ')')[BOOST_BIND_ACTION(push_function_expr)];
+
+      reserved_function_names = (S3SELECT_KW("when")|S3SELECT_KW("case")|S3SELECT_KW("then"));
+     
+      function = ( ((variable - reserved_function_names)  >> '(' )[BOOST_BIND_ACTION(push_function_name)] >> !list_of_function_arguments >> ')')[BOOST_BIND_ACTION(push_function_expr)];
 
       arithmetic_argument = (float_number)[BOOST_BIND_ACTION(push_float_number)] |  (number)[BOOST_BIND_ACTION(push_number)] | (json_variable_name)[BOOST_BIND_ACTION(push_json_variable)] |
 			    (column_pos)[BOOST_BIND_ACTION(push_column_pos)] |
                             (string)[BOOST_BIND_ACTION(push_string)] | (datediff) | (dateadd) | (extract) | (time_to_string_constant) | (time_to_string_dynamic) |
-                            (cast) | (substr) | (trim) |
+                            (cast) | (substr) | (trim) | (when_case_value_when) | (when_case_else_projection) |
                             (function) | (variable)[BOOST_BIND_ACTION(push_variable)]; //function is pushed by right-term
 
-      cast = (S3SELECT_KW("cast") >> '(' >> arithmetic_expression >> S3SELECT_KW("as") >> (data_type)[BOOST_BIND_ACTION(push_data_type)] >> ')') [BOOST_BIND_ACTION(push_cast_expr)];
+      cast = (S3SELECT_KW("cast") >> '(' >> factor >> S3SELECT_KW("as") >> (data_type)[BOOST_BIND_ACTION(push_data_type)] >> ')') [BOOST_BIND_ACTION(push_cast_expr)];
 
       data_type = (S3SELECT_KW("int") | S3SELECT_KW("float") | S3SELECT_KW("string") |  S3SELECT_KW("timestamp") | S3SELECT_KW("bool") );
      
@@ -767,7 +768,7 @@ public:
     bsc::rule<ScannerT> trim, trim_whitespace_both, trim_one_side_whitespace, trim_anychar_anyside, trim_type, trim_remove_type, substr, substr_from, substr_from_for;
     bsc::rule<ScannerT> datediff, dateadd, extract, date_part, date_part_extract, time_to_string_constant, time_to_string_dynamic;
     bsc::rule<ScannerT> special_predicates, between_predicate, not_between, in_predicate, like_predicate, like_predicate_escape, like_predicate_no_escape, is_null, is_not_null;
-    bsc::rule<ScannerT> muldiv_operator, addsubop_operator, function, arithmetic_expression, addsub_operand, list_of_function_arguments, arithmetic_argument, mulldiv_operand;
+    bsc::rule<ScannerT> muldiv_operator, addsubop_operator, function, arithmetic_expression, addsub_operand, list_of_function_arguments, arithmetic_argument, mulldiv_operand, reserved_function_names;
     bsc::rule<ScannerT> fs_type, object_path,json_s3_object,json_path_element;
     bsc::rule<ScannerT> projections, projection_expression, alias_name, column_pos,column_pos_name;
     bsc::rule<ScannerT> when_case_else_projection, when_case_value_when, when_stmt, when_value_then;
@@ -2562,8 +2563,7 @@ public:
 
   int run_s3select_on_stream(std::string& result, const char* json_stream, size_t stream_length, size_t obj_size)
   {
-    //TODO how to set end of stream(obj_size , same as CSV)
-
+    int status;
     m_processed_bytes += stream_length;
 
     if(!stream_length)//TODO m_processed_bytes(?)
@@ -2573,8 +2573,14 @@ public:
       return 0;
     }
 
+    try{
     //the handler is processing any buffer size
-    int status = JsonHandler.process_json_buffer((char*)json_stream, stream_length);
+      status = JsonHandler.process_json_buffer((char*)json_stream, stream_length);
+    }
+    catch(std::exception &e)
+    {
+      std::cout << "failure while processing " << e.what() << std::endl;
+    }
 
     if(status<0)
     {
@@ -2585,7 +2591,6 @@ public:
  
     return status; 
   }
-
 
   ~json_object() = default;
 };

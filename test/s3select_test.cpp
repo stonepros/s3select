@@ -780,6 +780,11 @@ void test_single_column_single_row(const char* input_query,const char* expected_
 	ASSERT_TRUE(true);
 	return; 
     }
+    else if (status != 0)
+    {
+	EXPECT_TRUE(false) << "fail to parse query: " << input_query;
+	return;
+    }
 
     s3selectEngine::csv_object s3_csv_object(&s3select_syntax);
     std::string s3select_result;

@@ -1,6 +1,27 @@
 #ifndef S3SELECT_JSON_PARSER_H
 #define S3SELECT_JSON_PARSER_H
 
+bool s3select_json_parse_error(bool b)
+{
+  if(!b)
+  {
+    std::cout << "failure while processing " << std::endl;
+  }
+  return false;
+}
+
+bool s3select_json_parse_error(const char* error)
+{
+  if(!error)
+  {
+    std::cout << "failure while processing " << std::endl;
+  }
+  return false;
+}
+
+//TODO add __FILE__ __LINE__ message
+#define RAPIDJSON_ASSERT(x) s3select_json_parse_error(x)
+
 #include "rapidjson/reader.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/filereadstream.h"
@@ -326,47 +347,49 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
 
     int process_json_buffer(char* json_buffer,size_t json_buffer_sz, bool end_of_stream=false)
     {//user keeps calling with buffers, the method is not aware of the object size.
-      m_end_of_chunk = false;
-      try {
 
-	      if(!init_buffer_stream)
-	      {
-		      //set the memoryStreamer
-		      reader.IterativeParseInit();
-		      init_buffer_stream = true;
-	      }
+	    m_end_of_chunk = false;
 
-	      //the non-processed bytes plus the next chunk are copy into main processing buffer 
-	      if(!end_of_stream)
-		      stream_buffer.resetBuffer(json_buffer, json_buffer_sz);
+      try{
+	    if(!init_buffer_stream)
+	    {
+		    //set the memoryStreamer
+		    reader.IterativeParseInit();
+		    init_buffer_stream = true;
+	    }
 
-	      while (!reader.IterativeParseComplete()) {
-		      reader.IterativeParseNext<rapidjson::kParseDefaultFlags>(stream_buffer, *this);
+	    //the non-processed bytes plus the next chunk are copy into main processing buffer 
+	    if(!end_of_stream)
+		    stream_buffer.resetBuffer(json_buffer, json_buffer_sz);
 
-		      //once all key-values move into s3select(for further filtering and processing), it should be cleared
+	    while (!reader.IterativeParseComplete()) {
+		    reader.IterativeParseNext<rapidjson::kParseDefaultFlags>(stream_buffer, *this);
 
-		      //TODO this condition could be replaced. it also define the amount of data that would be copy per each chunk
-		      if (!end_of_stream && stream_buffer.next_src_==0 && stream_buffer.getBytesLeft() < 100)
-		      {//the non processed bytes will be processed on next fetched chunk
-		        //TODO save remaining-bytes to internal buffer (or caller will use 2 sets of buffer)
-			      stream_buffer.saveRemainingBytes();
-			      return 0;
-		      }
+		    //once all key-values move into s3select(for further filtering and processing), it should be cleared
 
-		      // error message
-		      if(reader.HasParseError())  {
-			      rapidjson::ParseErrorCode c = reader.GetParseErrorCode();
-			      size_t o = reader.GetErrorOffset();
-			      std::cout << "PARSE ERROR " << c << " " << o << std::endl;
-			      return -1;	  
-		      }
-	      }//while reader.IterativeParseComplete
-      }
-      catch (std::exception& e) {
-        std::cerr << "exception caught: " << e.what() << '\n';
-      }
-      m_end_of_chunk = true;
-	    return 0;
+		    //TODO this condition could be replaced. it also define the amount of data that would be copy per each chunk
+		    if (!end_of_stream && stream_buffer.next_src_==0 && stream_buffer.getBytesLeft() < 100)
+		    {//the non processed bytes will be processed on next fetched chunk
+		     //TODO save remaining-bytes to internal buffer (or caller will use 2 sets of buffer)
+			    stream_buffer.saveRemainingBytes();
+			    return 0;
+		    }
+
+		    // error message
+		    if(reader.HasParseError())  {
+			    rapidjson::ParseErrorCode c = reader.GetParseErrorCode();
+			    size_t o = reader.GetErrorOffset();
+			    std::cout << "PARSE ERROR " << c << " " << o << std::endl;
+			    return -1;	  
+		    }
+	    }//while reader.IterativeParseComplete
+	    m_end_of_chunk = true;
+	}
+        catch(std::exception &e){//TODO specific exception
+                std::cout << "failed to process JSON" << e.what() << std::endl;
+                return -1;
+        }
+	return 0;
     }
 };
 
