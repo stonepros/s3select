@@ -117,7 +117,7 @@ class base_statement;
 //ChunkAllocator, prevent allocation from heap.
 typedef std::vector<base_statement*, ChunkAllocator<base_statement*, 256> > bs_stmt_vec_t;
 
-class base_s3select_exception
+class base_s3select_exception : public std::exception
 {
 
 public:

@@ -1,6 +1,27 @@
 #ifndef S3SELECT_JSON_PARSER_H
 #define S3SELECT_JSON_PARSER_H
 
+bool s3select_json_parse_error(bool b)
+{
+  if(!b)
+  {
+    std::cout << "failure while processing " << std::endl;
+  }
+  return false;
+}
+
+bool s3select_json_parse_error(const char* error)
+{
+  if(!error)
+  {
+    std::cout << "failure while processing " << std::endl;
+  }
+  return false;
+}
+
+//TODO add __FILE__ __LINE__ message
+#define RAPIDJSON_ASSERT(x) s3select_json_parse_error(x)
+
 #include "rapidjson/reader.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/filereadstream.h"
@@ -428,6 +449,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
 
 	    m_end_of_chunk = false;
 
+      try{
 	    if(!init_buffer_stream)
 	    {
 		    //set the memoryStreamer
@@ -461,8 +483,12 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
 		    }
 	    }//while reader.IterativeParseComplete
 	    m_end_of_chunk = true;
-
-	    return 0;
+	}
+        catch(std::exception &e){//TODO specific exception
+                std::cout << "failed to process JSON" << e.what() << std::endl;
+                return -1;
+        }
+	return 0;
     }
 };
 
