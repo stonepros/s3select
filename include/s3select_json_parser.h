@@ -40,6 +40,24 @@ bool s3select_json_parse_error(const char* error)
   return false;
 }
 
+bool s3select_json_parse_error(bool b)
+{
+  if(!b)
+  {
+    std::cout << "failure while processing " << std::endl;
+  }
+  return false;
+}
+
+bool s3select_json_parse_error(const char* error)
+{
+  if(!error)
+  {
+    std::cout << "failure while processing " << std::endl;
+  }
+  return false;
+}
+
 static auto iequal_predicate = [](std::string& it1, std::string& it2)
 			  {
 			    return boost::iequals(it1,it2);

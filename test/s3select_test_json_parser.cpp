@@ -234,6 +234,7 @@ int RGW_send_data(const char* object_name, std::string & result)
 	size_t buff_sz{1024*1024*4};
 	char* buff = (char*)malloc(buff_sz);
 	std::function<int(std::pair < std::string, s3selectEngine::value>)> fp;
+
 	size_t no_of = 0;
 
 	try {
