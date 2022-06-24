@@ -1,6 +1,26 @@
 #ifndef S3SELECT_JSON_PARSER_H
 #define S3SELECT_JSON_PARSER_H
 
+//TODO add __FILE__ __LINE__ message
+#define RAPIDJSON_ASSERT(x) s3select_json_parse_error(x)
+bool s3select_json_parse_error(bool b);
+bool s3select_json_parse_error(const char* error);
+
+#include "rapidjson/reader.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/filereadstream.h"
+#include "rapidjson/filewritestream.h"
+#include "rapidjson/error/en.h"
+#include "rapidjson/document.h"
+#include <cassert>
+#include <sstream>
+#include <vector>
+#include <iostream>
+#include <functional>
+#include <boost/spirit/include/classic_core.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include "s3select_oper.h"//class value
+
 bool s3select_json_parse_error(bool b)
 {
   if(!b)
@@ -18,24 +38,6 @@ bool s3select_json_parse_error(const char* error)
   }
   return false;
 }
-
-//TODO add __FILE__ __LINE__ message
-#define RAPIDJSON_ASSERT(x) s3select_json_parse_error(x)
-
-#include "rapidjson/reader.h"
-#include "rapidjson/writer.h"
-#include "rapidjson/filereadstream.h"
-#include "rapidjson/filewritestream.h"
-#include "rapidjson/error/en.h"
-#include "rapidjson/document.h"
-#include <cassert>
-#include <sstream>
-#include <vector>
-#include <iostream>
-#include <functional>
-#include <boost/spirit/include/classic_core.hpp>
-#include <boost/algorithm/string/predicate.hpp>
-#include "s3select_oper.h"//class value
 
 static auto iequal_predicate = [](std::string& it1, std::string& it2)
 			  {
@@ -466,8 +468,8 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
 
 		    //once all key-values move into s3select(for further filtering and processing), it should be cleared
 
-		    //TODO this condition could be replaced. it also define the amount of data that would be copy per each chunk
-		    if (!end_of_stream && stream_buffer.next_src_==0 && stream_buffer.getBytesLeft() < 100)
+		    //TODO in the case the chunk is too small or some value in input is too big, the parsing will fail.
+		    if (!end_of_stream && stream_buffer.next_src_==0 && stream_buffer.getBytesLeft() < 2048)
 		    {//the non processed bytes will be processed on next fetched chunk
 		     //TODO save remaining-bytes to internal buffer (or caller will use 2 sets of buffer)
 			    stream_buffer.saveRemainingBytes();
@@ -477,8 +479,10 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
 		    // error message
 		    if(reader.HasParseError())  {
 			    rapidjson::ParseErrorCode c = reader.GetParseErrorCode();
-			    size_t o = reader.GetErrorOffset();
-			    std::cout << "PARSE ERROR " << c << " " << o << std::endl;
+			    size_t ofs = reader.GetErrorOffset();
+			    std::stringstream error_str;
+			    error_str << "parsing error. code:" << c << " position: " << ofs << std::endl;
+			    std::cout << error_str.str();
 			    return -1;	  
 		    }
 	    }//while reader.IterativeParseComplete

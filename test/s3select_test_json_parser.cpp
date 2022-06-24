@@ -233,6 +233,7 @@ int RGW_send_data(const char* object_name, std::string & result)
 	size_t buff_sz{1024*1024*4};
 	char* buff = (char*)malloc(buff_sz);
 	std::function<int(std::pair < std::string, Valuesax>)> fp;
+	size_t no_of = 0;
 
 	try {
 		input_file_stream = std::ifstream(object_name, std::ios::in | std::ios::binary);
@@ -247,6 +248,7 @@ int RGW_send_data(const char* object_name, std::string & result)
 	while(read_size)
 	{
 		//the handler is processing any buffer size
+		std::cout << "processing buffer " << no_of++ << " size " << buff_sz << std::endl;
 		int status = handler.process_json_buffer(buff, read_size);
 		if(status<0) return -1;
 

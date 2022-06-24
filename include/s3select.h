@@ -2563,7 +2563,7 @@ public:
 
   int run_s3select_on_stream(std::string& result, const char* json_stream, size_t stream_length, size_t obj_size)
   {
-    int status;
+    int status=0;
     m_processed_bytes += stream_length;
 
     if(!stream_length || !stream_length)//TODO m_processed_bytes(?)
