@@ -498,19 +498,19 @@ std::string run_sax(const char * in)
 	JsonParserHandler handler;
 	std::string result{};
 	std::function<int(void)> f_sql = [](void){return 0;};
-	std::function<int(JsonParserHandler::json_key_value_t&,int)> fp = [&result](JsonParserHandler::json_key_value_t& key_value,int json_idx) {
+	std::function<int(s3selectEngine::value&,int)> fp = [&result](s3selectEngine::value& key_value,int json_idx) {
 	  std::stringstream filter_result;
       filter_result.str("");
     
       std::string match_key_path{};
-      for(auto k : key_value.first){match_key_path.append(k); match_key_path.append("/");} 
+      //for(auto k : key_value.first){match_key_path.append(k); match_key_path.append("/");} 
 
-		    switch(key_value.second._type()) {
-			    case s3selectEngine::value::value_En_t::DECIMAL: filter_result << match_key_path << " : " << key_value.second.i64() << "\n"; break;
-			    case s3selectEngine::value::value_En_t::FLOAT: filter_result << match_key_path  << " : " << key_value.second.dbl() << "\n"; break;
-			    case s3selectEngine::value::value_En_t::STRING: filter_result << match_key_path << " : " << key_value.second.str() << "\n"; break;
-			    case s3selectEngine::value::value_En_t::BOOL: filter_result << match_key_path << " : " <<std::boolalpha << key_value.second.bl() << "\n"; break;
-			    case s3selectEngine::value::value_En_t::S3NULL: filter_result << match_key_path << " : " << "null" << "\n"; break;
+		    switch(key_value._type()) {
+			    case s3selectEngine::value::value_En_t::DECIMAL: filter_result  << key_value.i64() << "\n"; break;
+			    case s3selectEngine::value::value_En_t::FLOAT: filter_result << key_value.dbl() << "\n"; break;
+			    case s3selectEngine::value::value_En_t::STRING: filter_result << key_value.str() << "\n"; break;
+			    case s3selectEngine::value::value_En_t::BOOL: filter_result  << std::boolalpha << key_value.bl() << "\n"; break;
+			    case s3selectEngine::value::value_En_t::S3NULL: filter_result << "null" << "\n"; break;
 			    default: break;
 		    }
       std::cout<<filter_result.str();
@@ -539,18 +539,18 @@ std::string run_exact_filter(const char* in, std::vector<std::vector<std::string
 	std::string result{};
 	std::function<int(void)> f_sql = [](void){return 0;};
 
-	std::function<int(JsonParserHandler::json_key_value_t&,int)> fp = [&result](JsonParserHandler::json_key_value_t& key_value,int json_idx) {
+	std::function<int(s3selectEngine::value&,int)> fp = [&result](s3selectEngine::value& key_value,int json_idx) {
 	  std::stringstream filter_result;
       filter_result.str("");
       std::string match_key_path;
-      for(auto k : key_value.first){match_key_path.append(k); match_key_path.append("/");} 
+      //for(auto k : key_value.first){match_key_path.append(k); match_key_path.append("/");} 
 
-	  		switch(key_value.second._type()) {
-			    case s3selectEngine::value::value_En_t::DECIMAL: filter_result << match_key_path << " : " << key_value.second.i64() << "\n"; break;
-			    case s3selectEngine::value::value_En_t::FLOAT: filter_result << match_key_path  << " : " << key_value.second.dbl() << "\n"; break;
-			    case s3selectEngine::value::value_En_t::STRING: filter_result << match_key_path << " : " << key_value.second.str() << "\n"; break;
-			    case s3selectEngine::value::value_En_t::BOOL: filter_result << match_key_path << " : " <<std::boolalpha << key_value.second.bl() << "\n"; break;
-			    case s3selectEngine::value::value_En_t::S3NULL: filter_result << match_key_path << " : " << "null" << "\n"; break;
+	  		switch(key_value._type()) {
+			    case s3selectEngine::value::value_En_t::DECIMAL: filter_result <<  key_value.i64() << "\n"; break;
+			    case s3selectEngine::value::value_En_t::FLOAT: filter_result << key_value.dbl() << "\n"; break;
+			    case s3selectEngine::value::value_En_t::STRING: filter_result << key_value.str() << "\n"; break;
+			    case s3selectEngine::value::value_En_t::BOOL: filter_result <<std::boolalpha << key_value.bl() << "\n"; break;
+			    case s3selectEngine::value::value_En_t::S3NULL: filter_result << "null" << "\n"; break;
 			    default: break;
 		    }
       std::cout<<filter_result.str();
@@ -636,7 +636,7 @@ int sax_row_count(const char *in, std::vector<std::string>& from_clause)
 	std::vector<std::string> keys;
 	std::function<int(void)> f_sql = [](void){return 0;};
 
-	std::function<int(JsonParserHandler::json_key_value_t&,int)> fp;
+	std::function<int(s3selectEngine::value&,int)> fp;
 
 	int status{1};
 
