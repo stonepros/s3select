@@ -176,7 +176,11 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     };
 
     row_state state = row_state::NA;
+<<<<<<< HEAD
     std::function <int(s3selectEngine::value&,int)> m_exact_match_cb;
+=======
+    std::function<int(Valuesax&,int)> m_exact_match_cb;
+>>>>>>> add an efficient flow for extracting JSON values.
 
     std::vector <std::vector<std::string>> query_matrix{};
     int row_count{};
@@ -348,7 +352,11 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       query_matrix = exact_match_filters;
     }
 
+<<<<<<< HEAD
     void set_exact_match_callback(std::function<int(s3selectEngine::value&, int)> f)
+=======
+    void set_exact_match_callback(std::function<int(Valuesax&,int)> f)
+>>>>>>> add an efficient flow for extracting JSON values.
     {//purpose: upon key is matching one of the exact filters, the callback is called.
       m_exact_match_cb = f;
     }

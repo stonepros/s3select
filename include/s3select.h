@@ -2524,6 +2524,7 @@ public:
     std::function<int(s3selectEngine::value&, int)> 
       f_push_to_scratch = [this](s3selectEngine::value& value,int json_var_idx){return push_into_scratch_area_cb(value,json_var_idx);};
 
+
     JsonHandler.set_s3select_processing_callback(f_sql);//calling to getMatchRow
     JsonHandler.set_exact_match_callback(f_push_to_scratch);//upon excat match push to scratch area 
 
@@ -2558,6 +2559,7 @@ private:
   }
 
   int push_into_scratch_area_cb(s3selectEngine::value& key_value, int json_var_idx)
+
   {
     //upon exact-filter match push value to scratch area with json-idx ,  it should match variable
     //push (key path , json-var-idx , value) json-var-idx should be attached per each exact filter
@@ -2575,6 +2577,7 @@ private:
       break;
       case value::value_En_t::BOOL:  
 	v=key_value.bl();
+
       break;
       case value::value_En_t::S3NULL: 
 	v.setnull();
