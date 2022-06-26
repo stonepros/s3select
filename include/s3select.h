@@ -960,11 +960,37 @@ void push_json_variable::builder(s3select* self, const char* a, const char* b) c
   variable* v = nullptr;
   free(path_part);
 
-  v = S3SELECT_NEW(self, variable, token, variable::var_t::JSON_VARIABLE, self->getAction()->json_variables.size());
+  //the following flow determine the index per json variable reside on statement.
+  //per each discovered json_variable, it search the json-variables-vector whether it already exists.
+  //in case it is exist, it uses its index (position in vector)
+  //in case it's not exist its pushes the variable into vector.
+  //the json-index is used upon updating the scratch area or searching for a specific json-variable value.
+  size_t json_index=0;
+  if(self->getAction()->json_variables.size())
+  {
+    std::vector<std::vector<std::string>>::iterator it;
+    it = std::find(self->getAction()->json_variables.begin(),
+		    self->getAction()->json_variables.end(),
+		    variable_key_path);
+
+    if(it != self->getAction()->json_variables.end())
+    {
+      json_index = it - self->getAction()->json_variables.begin();
+    }
+    else
+    {
+      json_index = self->getAction()->json_variables.size();
+      self->getAction()->json_variables.push_back(variable_key_path);
+    }
+  }
+  else
+  {
+      self->getAction()->json_variables.push_back(variable_key_path);
+  }
+
+  v = S3SELECT_NEW(self, variable, token, variable::var_t::JSON_VARIABLE, json_index);
 
   self->getAction()->exprQ.push_back(v);
-
-  self->getAction()->json_variables.push_back(variable_key_path);
 }
 
 void push_addsub::builder(s3select* self, const char* a, const char* b) const
@@ -2495,8 +2521,8 @@ public:
     JsonHandler.set_exact_match_filters(query->get_json_variables_key_path());
 
     std::function<int(void)> f_sql = [this](void){auto res = sql_execution_on_row_cb();return res;};
-    std::function<int(JsonParserHandler::json_key_value_t&, int)> 
-      f_push_to_scratch = [this](JsonParserHandler::json_key_value_t& key_value,int json_var_idx){return push_into_scratch_area_cb(key_value,json_var_idx);};
+    std::function<int(Valuesax&, int)> 
+      f_push_to_scratch = [this](Valuesax& value,int json_var_idx){return push_into_scratch_area_cb(value,json_var_idx);};
 
     JsonHandler.set_s3select_processing_callback(f_sql);//calling to getMatchRow
     JsonHandler.set_exact_match_callback(f_push_to_scratch);//upon excat match push to scratch area 
@@ -2531,23 +2557,23 @@ private:
       return status;
   }
 
-  int push_into_scratch_area_cb(JsonParserHandler::json_key_value_t& key_value,int json_var_idx)
+  int push_into_scratch_area_cb(Valuesax& json_value,int json_var_idx)
   {
     //upon exact-filter match push value to scratch area with json-idx ,  it should match variable
     //push (key path , json-var-idx , value) json-var-idx should be attached per each exact filter
     value v; 
-    switch(key_value.second.type()) {
+    switch(json_value.type()) {
       case Valuesax::Decimal: 
-	v=key_value.second.asInt();
+	v=json_value.asInt();
       break;
       case Valuesax::Double:  
-	v=key_value.second.asDouble();
+	v=json_value.asDouble();
       break;
       case Valuesax::String:  
-	v=key_value.second.asString().data();
+	v=json_value.asString().data();
       break;
       case Valuesax::Bool:  
-	v=key_value.second.asBool();
+	v=json_value.asBool();
       break;
       case Valuesax::Null: 
 	v.setnull();

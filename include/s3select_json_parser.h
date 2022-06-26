@@ -258,8 +258,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     };
 
     row_state state = row_state::NA;
-// TODO its possible there is no need to std::vector<std::string>, the json-idx is enough
-    std::function <int(JsonParserHandler::json_key_value_t&,int)> m_exact_match_cb;
+    std::function<int(Valuesax&,int)> m_exact_match_cb;
 
     std::vector <std::vector<std::string>> query_matrix{};
     int row_count{};
@@ -319,9 +318,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       if (prefix_match) {
         for (auto filter : query_matrix) {
           if(std::equal(key_path.begin() + from_clause.size(), key_path.end(), filter.begin(),iequal_predicate)) {
-	    //TODO very intensove not need for key-path
-	    JsonParserHandler::json_key_value_t found_variable(key_path,v);
-            m_exact_match_cb(found_variable, json_idx);
+            m_exact_match_cb(v, json_idx);
           }
 	  json_idx ++;//TODO can use filter - begin()
         }
@@ -431,7 +428,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       query_matrix = exact_match_filters;
     }
 
-    void set_exact_match_callback(std::function<int(json_key_value_t&,int)> f)
+    void set_exact_match_callback(std::function<int(Valuesax&,int)> f)
     {//purpose: upon key is matching one of the exact filters, the callback is called.
       m_exact_match_cb = f;
     }
