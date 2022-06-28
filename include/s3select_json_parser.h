@@ -40,24 +40,6 @@ bool s3select_json_parse_error(const char* error)
   return false;
 }
 
-bool s3select_json_parse_error(bool b)
-{
-  if(!b)
-  {
-    std::cout << "failure while processing " << std::endl;
-  }
-  return false;
-}
-
-bool s3select_json_parse_error(const char* error)
-{
-  if(!error)
-  {
-    std::cout << "failure while processing " << std::endl;
-  }
-  return false;
-}
-
 static auto iequal_predicate = [](std::string& it1, std::string& it2)
 			  {
 			    return boost::iequals(it1,it2);
@@ -176,11 +158,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     };
 
     row_state state = row_state::NA;
-<<<<<<< HEAD
     std::function <int(s3selectEngine::value&,int)> m_exact_match_cb;
-=======
-    std::function<int(Valuesax&,int)> m_exact_match_cb;
->>>>>>> add an efficient flow for extracting JSON values.
 
     std::vector <std::vector<std::string>> query_matrix{};
     int row_count{};
@@ -328,7 +306,6 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       json_element_state.push_back(ARRAY_STATE);
       if (prefix_match && from_clause.size() && (key_path[key_path.size() - 1] == from_clause[from_clause.size() - 1])) {
           state = row_state::ARRAY_START_ROW;
-
         }
       return true;
     }
@@ -352,11 +329,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       query_matrix = exact_match_filters;
     }
 
-<<<<<<< HEAD
     void set_exact_match_callback(std::function<int(s3selectEngine::value&, int)> f)
-=======
-    void set_exact_match_callback(std::function<int(Valuesax&,int)> f)
->>>>>>> add an efficient flow for extracting JSON values.
     {//purpose: upon key is matching one of the exact filters, the callback is called.
       m_exact_match_cb = f;
     }

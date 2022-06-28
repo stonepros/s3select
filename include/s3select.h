@@ -2559,7 +2559,6 @@ private:
   }
 
   int push_into_scratch_area_cb(s3selectEngine::value& key_value, int json_var_idx)
-
   {
     //upon exact-filter match push value to scratch area with json-idx ,  it should match variable
     //push (key path , json-var-idx , value) json-var-idx should be attached per each exact filter
@@ -2577,7 +2576,6 @@ private:
       break;
       case value::value_En_t::BOOL:  
 	v=key_value.bl();
-
       break;
       case value::value_En_t::S3NULL: 
 	v.setnull();
