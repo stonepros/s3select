@@ -2521,8 +2521,9 @@ public:
     JsonHandler.set_exact_match_filters(query->get_json_variables_key_path());
 
     std::function<int(void)> f_sql = [this](void){auto res = sql_execution_on_row_cb();return res;};
-    std::function<int(Valuesax&, int)> 
-      f_push_to_scratch = [this](Valuesax& value,int json_var_idx){return push_into_scratch_area_cb(value,json_var_idx);};
+    std::function<int(s3selectEngine::value&, int)> 
+      f_push_to_scratch = [this](s3selectEngine::value& value,int json_var_idx){return push_into_scratch_area_cb(value,json_var_idx);};
+
 
     JsonHandler.set_s3select_processing_callback(f_sql);//calling to getMatchRow
     JsonHandler.set_exact_match_callback(f_push_to_scratch);//upon excat match push to scratch area 
@@ -2557,25 +2558,26 @@ private:
       return status;
   }
 
-  int push_into_scratch_area_cb(Valuesax& json_value,int json_var_idx)
+  int push_into_scratch_area_cb(s3selectEngine::value& key_value, int json_var_idx)
   {
     //upon exact-filter match push value to scratch area with json-idx ,  it should match variable
     //push (key path , json-var-idx , value) json-var-idx should be attached per each exact filter
     value v; 
-    switch(json_value.type()) {
-      case Valuesax::Decimal: 
-	v=json_value.asInt();
+
+    switch(key_value._type()) {
+      case value::value_En_t::DECIMAL: 
+	v=key_value.i64();
       break;
-      case Valuesax::Double:  
-	v=json_value.asDouble();
+      case value::value_En_t::FLOAT:  
+	v=key_value.dbl();
       break;
-      case Valuesax::String:  
-	v=json_value.asString().data();
+      case value::value_En_t::STRING:  
+	v=key_value.str();
       break;
-      case Valuesax::Bool:  
-	v=json_value.asBool();
+      case value::value_En_t::BOOL:  
+	v=key_value.bl();
       break;
-      case Valuesax::Null: 
+      case value::value_En_t::S3NULL: 
 	v.setnull();
       default:
       break;

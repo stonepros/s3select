@@ -6,6 +6,7 @@
 #include <vector>
 #include <filesystem>
 #include <iostream>
+#include "s3select_oper.h"
 #include <boost/algorithm/string/predicate.hpp>
 
 // ===== base64 encode/decode
@@ -232,7 +233,8 @@ int RGW_send_data(const char* object_name, std::string & result)
 	JsonParserHandler handler;
 	size_t buff_sz{1024*1024*4};
 	char* buff = (char*)malloc(buff_sz);
-	std::function<int(std::pair < std::string, Valuesax>)> fp;
+	std::function<int(std::pair < std::string, s3selectEngine::value>)> fp;
+
 	size_t no_of = 0;
 
 	try {
@@ -280,6 +282,40 @@ int test_compare(int argc, char* argv[])
 
 	return 0;
 }
+
+std::string json2 = R"({
+"row" : [
+	{
+		"color": "red",
+		"value": "#f00"
+	},
+	{
+		"color": "green",
+		"value": "#0f0"
+	},
+	{
+		"color": "blue",
+		"value": "#00f"
+	},
+	{
+		"color": "cyan",
+		"value": "#0ff"
+	},
+	{
+		"color": "magenta",
+		"value": "#f0f"
+	},
+	{
+		"color": "yellow",
+		"value": "#ff0"
+	},
+	{
+		"color": "black",
+		"value": "#000"
+	}
+]
+}
+)";
 
 
 #define TEST2 \
@@ -449,24 +485,32 @@ SI6IDUsDQogICAgInVzZV9idWlsdGluX3RvciI6IHRydWUsDQogICAgIndvcmtlcnMiOiB7DQogICAgI
 ICAgICAgICAgInN0YXJ0X2Nvb3JkcyI6IFswLCA5XQ0KICAgICAgICB9LA0KICAgICAgICAiam9uc25vdyI6IHsNCiAgICAgICAgICAgICJwYXNzd29yZCI6ICJhc2RmZ2hqIiwNCiAgICAgICAgICAgICJzdGF\
 ydF9jb29yZHMiOiBbMSwgN10NCiAgICAgICAgfQ0KICAgIH0NCn0NCg=="
 
+#define TEST11 \
+"ewoiZmlyc3ROYW1lIjogIkpvZSIsCiJsYXN0TmFtZSI6ICJKYWNrc29uIiwKImdlbmRlciI6ICJtYWxlIiwKImFnZSI6ICJ0d2VudHkiLAoiYWRkcmVzcyI6IHsKInN0cmVldEFkZHJlc3MiO\
+iAiMTAxIiwKImNpdHkiOiAiU2FuIERpZWdvIiwKInN0YXRlIjogIkNBIgp9LAoicGhvbmVOdW1iZXJzIjogWwp7ICJ0eXBlIjogImhvbWUxIiwgIm51bWJlciI6ICI3MzQ5MjgyXzEiIH0sCn\
+sgInR5cGUiOiAiaG9tZTIiLCAibnVtYmVyIjogIjczNDkyODJfMiIgfSwKeyAidHlwZSI6ICJob21lMyIsICJudW1iZXIiOiAiNzM0OTI4XzMiIH0sCnsgInR5cGUiOiAiaG9tZTQiLCAibnV\
+tYmVyIjogIjczNDkyOF80IiB9LAp7ICJ0eXBlIjogImhvbWU1IiwgIm51bWJlciI6ICI3MzQ5MjhfNSIgfSwKeyAidHlwZSI6ICJob21lNiIsICJudW1iZXIiOiAiNzM0OTI4XzYiIH0sCnsg\
+InR5cGUiOiAiaG9tZTciLCAibnVtYmVyIjogIjczNDkyOF83IiB9LAp7ICJ0eXBlIjogImhvbWU4IiwgIm51bWJlciI6ICI3MzQ5MjhfOCIgfSwKeyAidHlwZSI6ICJob21lOSIsICJudW1iZ\
+XIiOiAiNzM0OTI4XzkiIH0KXQp9Cg=="
+
 std::string run_sax(const char * in)
 {
 	JsonParserHandler handler;
 	std::string result{};
 	std::function<int(void)> f_sql = [](void){return 0;};
-	std::function<int(JsonParserHandler::json_key_value_t&,int)> fp = [&result](JsonParserHandler::json_key_value_t& key_value,int json_idx) {
+	std::function<int(s3selectEngine::value&,int)> fp = [&result](s3selectEngine::value& key_value,int json_idx) {
 	  std::stringstream filter_result;
       filter_result.str("");
     
       std::string match_key_path{};
-      for(auto k : key_value.first){match_key_path.append(k); match_key_path.append("/");} 
+      //for(auto k : key_value.first){match_key_path.append(k); match_key_path.append("/");} 
 
-		    switch(key_value.second.type()) {
-			    case Valuesax::Decimal: filter_result << match_key_path << " : " << key_value.second.asInt() << "\n"; break;
-			    case Valuesax::Double: filter_result << match_key_path  << " : " << key_value.second.asDouble() << "\n"; break;
-			    case Valuesax::String: filter_result << match_key_path << " : " << key_value.second.asString() << "\n"; break;
-			    case Valuesax::Bool: filter_result << match_key_path << " : " <<std::boolalpha << key_value.second.asBool() << "\n"; break;
-			    case Valuesax::Null: filter_result << match_key_path << " : " << "null" << "\n"; break;
+		    switch(key_value._type()) {
+			    case s3selectEngine::value::value_En_t::DECIMAL: filter_result  << key_value.i64() << "\n"; break;
+			    case s3selectEngine::value::value_En_t::FLOAT: filter_result << key_value.dbl() << "\n"; break;
+			    case s3selectEngine::value::value_En_t::STRING: filter_result << key_value.str() << "\n"; break;
+			    case s3selectEngine::value::value_En_t::BOOL: filter_result  << std::boolalpha << key_value.bl() << "\n"; break;
+			    case s3selectEngine::value::value_En_t::S3NULL: filter_result << "null" << "\n"; break;
 			    default: break;
 		    }
       std::cout<<filter_result.str();
@@ -488,25 +532,25 @@ std::string run_sax(const char * in)
 	return std::string("failure-sax");
 }
 
-std::string run_exact_filter(const char * in, std::vector<std::vector<std::string>>& pattern)
+std::string run_exact_filter(const char* in, std::vector<std::vector<std::string>>& pattern)
 {
 	JsonParserHandler handler;
 	std::vector<std::string> keys;
 	std::string result{};
 	std::function<int(void)> f_sql = [](void){return 0;};
 
-	std::function<int(JsonParserHandler::json_key_value_t&,int)> fp = [&result](JsonParserHandler::json_key_value_t& key_value,int json_idx) {
+	std::function<int(s3selectEngine::value&,int)> fp = [&result](s3selectEngine::value& key_value,int json_idx) {
 	  std::stringstream filter_result;
       filter_result.str("");
       std::string match_key_path;
-      for(auto k : key_value.first){match_key_path.append(k); match_key_path.append("/");} 
-      
-		    switch(key_value.second.type()) {
-			    case Valuesax::Decimal: filter_result << match_key_path << " : " << key_value.second.asInt() << "\n"; break;
-			    case Valuesax::Double: filter_result << match_key_path << " : " << key_value.second.asDouble() << "\n"; break;
-			    case Valuesax::String: filter_result << match_key_path << " : " << key_value.second.asString() << "\n"; break;
-			    case Valuesax::Bool: filter_result << match_key_path << " : " <<std::boolalpha << key_value.second.asBool() << "\n"; break;
-			    case Valuesax::Null: filter_result << match_key_path << " : " << "null" << "\n"; break;
+      //for(auto k : key_value.first){match_key_path.append(k); match_key_path.append("/");} 
+
+	  		switch(key_value._type()) {
+			    case s3selectEngine::value::value_En_t::DECIMAL: filter_result <<  key_value.i64() << "\n"; break;
+			    case s3selectEngine::value::value_En_t::FLOAT: filter_result << key_value.dbl() << "\n"; break;
+			    case s3selectEngine::value::value_En_t::STRING: filter_result << key_value.str() << "\n"; break;
+			    case s3selectEngine::value::value_En_t::BOOL: filter_result <<std::boolalpha << key_value.bl() << "\n"; break;
+			    case s3selectEngine::value::value_En_t::S3NULL: filter_result << "null" << "\n"; break;
 			    default: break;
 		    }
       std::cout<<filter_result.str();
@@ -523,7 +567,7 @@ std::string run_exact_filter(const char * in, std::vector<std::vector<std::strin
 
 	handler.set_exact_match_callback(fp);
 	handler.set_s3select_processing_callback(f_sql);
-	status = handler.process_json_buffer(base64_decode(std::string(in)).data(), strlen(in));
+	status = handler.process_json_buffer( base64_decode(std::string(in)).data(), strlen(in));
 
 	std::cout<<"\n";
 
@@ -574,7 +618,7 @@ int compare_results(const char *in)
 	return res;
 }
 
-std::string sax_exact_filter(const char *in, std::vector<std::vector<std::string>> & query_clause)
+std::string sax_exact_filter(const char* in, std::vector<std::vector<std::string>> & query_clause)
 {
 	std::string sax_res{};
 
@@ -592,7 +636,7 @@ int sax_row_count(const char *in, std::vector<std::string>& from_clause)
 	std::vector<std::string> keys;
 	std::function<int(void)> f_sql = [](void){return 0;};
 
-	std::function<int(JsonParserHandler::json_key_value_t&,int)> fp;
+	std::function<int(s3selectEngine::value&,int)> fp;
 
 	int status{1};
 
@@ -630,15 +674,15 @@ row/color/ : magenta
 row/color/ : yellow
 row/color/ : black
 )";
-	ASSERT_EQ( boost::iequals(sax_exact_filter(TEST2, input), result_0),true);
+	ASSERT_EQ( boost::iequals (sax_exact_filter(TEST2, input), result_0), true);
 
 	std::vector<std::vector<std::string>> input1 = {{"nested_obj"}, {"hello2"}};
 	std::string result = "nested_obj/hello2/ : world\n";
-	ASSERT_EQ(boost::iequals(sax_exact_filter(TEST3, input1), result),true);
+	ASSERT_EQ( boost::iequals (sax_exact_filter(TEST3, input1), result), true);
 
 	std::vector<std::vector<std::string>> input2 = {{"nested_obj"}, {"nested2", "c1"}};
 	std::string result_1 = "nested_obj/nested2/c1/ : c1_value\n";
-	ASSERT_EQ(boost::iequals(sax_exact_filter(TEST3, input2), result_1),true);
+	ASSERT_EQ( boost::iequals (sax_exact_filter(TEST3, input2), result_1), true);
 	
 	std::vector<std::vector<std::string>> input3 = {{"nested_obj"}, {"nested2", "array_nested2"}};
 	std::string result_2 = R"(nested_obj/nested2/array_nested2/ : 10
@@ -646,7 +690,7 @@ nested_obj/nested2/array_nested2/ : 20
 nested_obj/nested2/array_nested2/ : 30
 nested_obj/nested2/array_nested2/ : 40
 )";
-	ASSERT_EQ(boost::iequals(sax_exact_filter(TEST3, input3), result_2),true);
+	ASSERT_EQ( boost::iequals (sax_exact_filter(TEST3, input3), result_2), true);
 
 	std::vector<std::vector<std::string>> input4 = {{"nested_obj"}, {"nested2", "c1"}, {"nested2", "array_nested2"}};
 	std::string result_3 = R"(nested_obj/nested2/c1/ : c1_value
@@ -655,13 +699,13 @@ nested_obj/nested2/array_nested2/ : 20
 nested_obj/nested2/array_nested2/ : 30
 nested_obj/nested2/array_nested2/ : 40
 )";
-	ASSERT_EQ( boost::iequals(sax_exact_filter(TEST3, input4), result_3),true);
+	ASSERT_EQ( boost::iequals (sax_exact_filter(TEST3, input4), result_3), true);
 	
 	std::vector<std::vector<std::string>> input5 = {{"nested_obj", "nested3"}, {"nested4", "c1"}, {"hello3"}};
 	std::string result_4 = R"(nested_obj/nested3/hello3/ : world
 nested_obj/nested3/nested4/c1/ : c1_value
 )";
-	ASSERT_EQ( boost::iequals(sax_exact_filter(TEST3, input5), result_4),true);
+	ASSERT_EQ( boost::iequals (sax_exact_filter(TEST3, input5), result_4), true);
 
 	std::vector<std::vector<std::string>> input6 = {{"nested_obj", "nested3"}, {"t2"}, {"nested4", "array_nested3"}};
 	std::string result_5 = R"(nested_obj/nested3/t2/ : true
@@ -670,30 +714,43 @@ nested_obj/nested3/nested4/array_nested3/ : 200
 nested_obj/nested3/nested4/array_nested3/ : 300
 nested_obj/nested3/nested4/array_nested3/ : 400
 )";
-	ASSERT_EQ( boost::iequals(sax_exact_filter(TEST3, input6), result_5),true);
+	ASSERT_EQ( boost::iequals (sax_exact_filter(TEST3, input6), result_5), true);
 
 	std::vector<std::vector<std::string>> input7 = {{"glossary"}, {"title"}};
 	std::string result_6 = "glossary/title/ : example glossary\n";
-	ASSERT_EQ( boost::iequals(sax_exact_filter(TEST4, input7), result_6),true);
+	ASSERT_EQ( boost::iequals (sax_exact_filter(TEST4, input7), result_6), true);
 
 	std::vector<std::vector<std::string>> input8 = {{"glossary"}, {"title"}, {"GlossDiv", "title"}};
 	std::string result_7 = R"(glossary/title/ : example glossary
 glossary/GlossDiv/title/ : S
 )";
-	ASSERT_EQ( boost::iequals(sax_exact_filter(TEST4, input8), result_7),true);
+	ASSERT_EQ( boost::iequals (sax_exact_filter(TEST4, input8), result_7), true);
 
 	std::vector<std::vector<std::string>> input9 = {{"glossary", "GlossDiv"}, {"GlossList", "GlossEntry", "GlossDef", "para"}, {"GlossList", "GlossEntry", "GlossDef", "GlossSeeAlso"}};
 	std::string result_8 = R"(glossary/GlossDiv/GlossList/GlossEntry/GlossDef/para/ : A meta-markup language, used to create markup languages such as DocBook.
 glossary/GlossDiv/GlossList/GlossEntry/GlossDef/GlossSeeAlso/ : GML
 glossary/GlossDiv/GlossList/GlossEntry/GlossDef/GlossSeeAlso/ : XML
 )";
-	ASSERT_EQ( boost::iequals(sax_exact_filter(TEST4, input9), result_8),true);
+	ASSERT_EQ( boost::iequals (sax_exact_filter(TEST4, input9), result_8), true);
 
 	std::vector<std::vector<std::string>> input10 = {{"glossary", "GlossDiv"}, {"GlossList", "GlossEntry", "GlossDef", "postarray", "a"}, {"GlossList", "GlossEntry", "GlossSee"}};
 	std::string result_9 = R"(glossary/GlossDiv/GlossList/GlossEntry/GlossDef/postarray/a/ : 111
 glossary/GlossDiv/GlossList/GlossEntry/GlossSee/ : markup
 )";
-	ASSERT_EQ( boost::iequals(sax_exact_filter(TEST5, input10), result_9),true);
+	ASSERT_EQ( boost::iequals (sax_exact_filter(TEST5, input10), result_9), true);
+
+	std::vector<std::vector<std::string>> input11 = {{"phoneNumbers"}, {"type"}};
+	std::string result_10 = R"(phoneNumbers/type/ : home1
+phoneNumbers/type/ : home2
+phoneNumbers/type/ : home3
+phoneNumbers/type/ : home4
+phoneNumbers/type/ : home5
+phoneNumbers/type/ : home6
+phoneNumbers/type/ : home7
+phoneNumbers/type/ : home8
+phoneNumbers/type/ : home9
+)";
+	ASSERT_EQ( boost::iequals (sax_exact_filter(TEST11, input11), result_10), true);
 }
 
 TEST(TestS3selectJsonParser, iterativeParse)
@@ -794,5 +851,11 @@ TEST(TestS3selectJsonParser, row_count)
 
 	std::vector<std::string> from_clause_29 = {"workers", "jonsnow", "start_coords"};
 	ASSERT_EQ( sax_row_count(TEST10, from_clause_29), 2);
+
+	std::vector<std::string> from_clause_30 = {"address"};
+	ASSERT_EQ( sax_row_count(TEST11, from_clause_30), 1);
+
+	std::vector<std::string> from_clause_31 = {"phoneNumbers"};
+	ASSERT_EQ( sax_row_count(TEST11, from_clause_31), 9);
 }
 

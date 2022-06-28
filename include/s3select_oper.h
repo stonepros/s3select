@@ -421,6 +421,7 @@ public:
     char* str;//TODO consider string_view(save copy)
     double dbl;
     timestamp_t* timestamp;
+    bool b;
   } value_t;
 
   multi_values multiple_values;
@@ -549,6 +550,8 @@ public:
     type = value_En_t::S3NULL;
   }
 
+  value_En_t _type() const { return type; }
+
   const char* to_string()  //TODO very intensive , must improve this
   {
 
@@ -662,6 +665,30 @@ public:
     return *this;
   }
 
+  value& operator=(int i)
+  {
+    this->__val.num = i;
+    this->type = value_En_t::DECIMAL;
+
+    return *this;
+  }
+
+  value& operator=(unsigned i)
+  {
+    this->__val.num = i;
+    this->type = value_En_t::DECIMAL;
+
+    return *this;
+  }
+
+  value& operator=(uint64_t i)
+  {
+    this->__val.num = i;
+    this->type = value_En_t::DECIMAL;
+
+    return *this;
+  }
+
   value& operator=(double d)
   {
     this->__val.dbl = d;
@@ -699,6 +726,11 @@ public:
   double dbl()
   {
     return __val.dbl;
+  }
+
+  bool bl()
+  {
+    return __val.b;
   }
 
   timestamp_t* timestamp() const
