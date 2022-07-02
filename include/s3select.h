@@ -2576,9 +2576,6 @@ private:
       //create response (TODO callback)
       
       auto status = getMatchRow(s3select_result);
-      std::cout << s3select_result;
-      s3select_result.clear();
-
       return status;
   }
 
@@ -2586,28 +2583,7 @@ private:
   {
     //upon exact-filter match push value to scratch area with json-idx ,  it should match variable
     //push (key path , json-var-idx , value) json-var-idx should be attached per each exact filter
-    value v; 
-
-    switch(key_value._type()) {
-      case value::value_En_t::DECIMAL: 
-	v=key_value.i64();
-      break;
-      case value::value_En_t::FLOAT:  
-	v=key_value.dbl();
-      break;
-      case value::value_En_t::STRING:  
-	v=key_value.str();
-      break;
-      case value::value_En_t::BOOL:  
-	v=key_value.bl();
-      break;
-      case value::value_En_t::S3NULL: 
-	v.setnull();
-      default:
-      break;
-    }
- 
-    m_sa->update_json_varible(v,json_var_idx);
+    m_sa->update_json_varible(key_value,json_var_idx);
     return 0;
   }
 
@@ -2619,16 +2595,18 @@ public:
     m_processed_bytes += stream_length;
 
     if(!stream_length || !stream_length)//TODO m_processed_bytes(?)
-    {
+    {//last processing cycle
       JsonHandler.process_json_buffer(0, 0, true);//TODO end-of-stream = end-of-row
       m_end_of_stream = true;
       sql_execution_on_row_cb();
+      result = s3select_result;
       return 0;
     }
 
     try{
-    //the handler is processing any buffer size
+    //the handler is processing any buffer size and return results per each buffer
       status = JsonHandler.process_json_buffer((char*)json_stream, stream_length);
+      result = s3select_result;//TODO remove this result copy
     }
     catch(std::exception &e)
     {

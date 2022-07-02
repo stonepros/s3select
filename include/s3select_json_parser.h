@@ -218,7 +218,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
 
       if (prefix_match) {
         for (auto filter : query_matrix) {
-          if(std::equal(key_path.begin() + from_clause.size(), key_path.end(), filter.begin(),iequal_predicate)) {
+	   if(std::equal(key_path.begin()+from_clause.size(), key_path.end(), filter.begin(), filter.end(), iequal_predicate)){
             m_exact_match_cb(v, json_idx);
           }
 	  json_idx ++;//TODO can use filter - begin()
