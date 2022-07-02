@@ -172,8 +172,10 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     std::string m_result;//debug purpose
     std::vector<std::string> key_path;
     std::function<int(void)> m_s3select_processing;
+    int m_start_row_depth;   
+    int m_current_depth;
 
-    JsonParserHandler() : prefix_match(false),init_buffer_stream(false)
+    JsonParserHandler() : prefix_match(false),init_buffer_stream(false),m_start_row_depth(-1),m_current_depth(0)
     {} 
 
     std::string get_key_path()
@@ -197,13 +199,13 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
         }
       }
       
-      if (key_path.size() < from_clause.size()) {
-        prefix_match = false;
-        state = row_state::END_ROW;
-      } 
-      else if (prefix_match) {
-          if (state == row_state::ARRAY_START_ROW) {
-	    m_s3select_processing();
+      if(m_start_row_depth > m_current_depth)
+      {
+	  prefix_match = false;
+      } else
+      if (prefix_match) {
+          if (state == row_state::ARRAY_START_ROW && m_start_row_depth == m_current_depth) {
+	    m_s3select_processing(); //per each element in array
             ++row_count;
           }
       }
@@ -277,50 +279,67 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       return true;
     }
 
+    bool is_already_row_started()
+    {
+      if(state == row_state::OBJECT_START_ROW || state == row_state::ARRAY_START_ROW)
+	return true;
+      else
+	return false;
+    }
+
     bool StartObject() {      
-      if (key_path.size()) {
-        if (prefix_match && from_clause.size() && (key_path[key_path.size() -1] == from_clause[from_clause.size() - 1])) {
+	json_element_state.push_back(OBJECT_STATE);
+	m_current_depth++;
+        if (prefix_match && !is_already_row_started()) {
           state = row_state::OBJECT_START_ROW;
+	  m_start_row_depth = m_current_depth;
           ++row_count;
         }
-      }
-      if (!key_path.size()) {
-          state = row_state::END_ROW;
-        }
 
-      json_element_state.push_back(OBJECT_STATE);
       return true; 
     }
   
     bool EndObject(rapidjson::SizeType memberCount) {
       json_element_state.pop_back();
+      m_current_depth --;
+
       dec_key_path();
-      if (state == row_state::OBJECT_START_ROW) {
+      if (state == row_state::OBJECT_START_ROW && (m_start_row_depth > m_current_depth)) {
 	m_s3select_processing();
+	state = row_state::NA;
       }
       return true; 
     }
  
     bool StartArray() {
       json_element_state.push_back(ARRAY_STATE);
-      if (prefix_match && from_clause.size() && (key_path[key_path.size() - 1] == from_clause[from_clause.size() - 1])) {
+      m_current_depth++;
+      if (prefix_match && !is_already_row_started()) {
           state = row_state::ARRAY_START_ROW;
+	  m_start_row_depth = m_current_depth;
         }
       return true;
     }
 
     bool EndArray(rapidjson::SizeType elementCount) { 
       json_element_state.pop_back();
+      m_current_depth--;
       dec_key_path();
-        if (!key_path.size()) {
-          state = row_state::END_ROW;
-        }
+
+      if (state == row_state::ARRAY_START_ROW && (m_start_row_depth > m_current_depth)) {
+	state = row_state::NA;
+      }
       return true;
     }
 
     void set_prefix_match(std::vector<std::string>& requested_prefix_match)
     {//purpose: set the filter according to SQL statement(from clause)
       from_clause = requested_prefix_match;
+      if(from_clause.size() ==0)
+      {
+	prefix_match = true;
+	m_start_row_depth = m_current_depth;
+      }
     }
 
     void set_exact_match_filters(std::vector <std::vector<std::string>>& exact_match_filters)

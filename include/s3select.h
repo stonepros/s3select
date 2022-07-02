@@ -826,17 +826,25 @@ void push_json_from_clause::builder(s3select* self, const char* a, const char* b
   //remove s3object[*]
   std::vector<std::string> variable_key_path;
   const char* delimiter = ".";
-  char* path_part = strdup(token.data() + strlen(JSON_ROOT_OBJECT)+1);  
 
-   
-  path_part = std::strtok(path_part, delimiter);
-  while (path_part) {
+
+  if(token.find(delimiter) != std::string::npos)
+  {
+    char* path_part = strdup(token.data() + strlen(JSON_ROOT_OBJECT)+1);  
+
+    path_part = std::strtok(path_part, delimiter);
+    while (path_part) {
 	std::string part=path_part;
 	variable_key_path.push_back(part);	
         path_part = std::strtok(nullptr, delimiter);
+    }
+    free(path_part);
+  }
+  else
+  {
+    variable_key_path.push_back(JSON_ROOT_OBJECT);
   }
 
-  free(path_part);
   self->getAction()->json_from_clause = variable_key_path;
 }
 
@@ -2541,6 +2549,10 @@ public:
     JsonHandler.set_exact_match_callback(f_push_to_scratch);//upon excat match push to scratch area 
 
     //setting the from clause path 
+    if(query->getAction()->json_from_clause[0] == JSON_ROOT_OBJECT)
+    {
+      query->getAction()->json_from_clause.pop_back();
+    }
     JsonHandler.set_prefix_match(query->getAction()->json_from_clause);
 
     m_sa->set_parquet_type();
