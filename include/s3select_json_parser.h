@@ -159,6 +159,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
 
     row_state state = row_state::NA;
     std::function <int(s3selectEngine::value&,int)> m_exact_match_cb;
+    std::function <int(s3selectEngine::scratch_area::json_key_value_t&)> m_star_operation_cb;
 
     std::vector <std::vector<std::string>> query_matrix{};
     int row_count{};
@@ -174,8 +175,9 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     std::function<int(void)> m_s3select_processing;
     int m_start_row_depth;   
     int m_current_depth;
+    bool m_star_operation;
 
-    JsonParserHandler() : prefix_match(false),init_buffer_stream(false),m_start_row_depth(-1),m_current_depth(0)
+    JsonParserHandler() : prefix_match(false),init_buffer_stream(false),m_start_row_depth(-1),m_current_depth(0),m_star_operation(false)
     {} 
 
     std::string get_key_path()
@@ -216,6 +218,12 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
 
       //std::cout << get_key_path() << std::endl;
 
+      if (m_star_operation && prefix_match)
+      {
+	json_key_value_t key_value(key_path,v);
+	m_star_operation_cb(key_value);
+      }
+
       if (prefix_match) {
         for (auto filter : query_matrix) {
 	   if(std::equal(key_path.begin()+from_clause.size(), key_path.end(), filter.begin(), filter.end(), iequal_predicate)){
@@ -228,7 +236,6 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     }
 
     bool Null() {
-      // at this point should verify against from-clause/where-clause/project. if match then push to scratch-area
       var_value.setnull();
       push_new_key_value(var_value);
       return true; }
@@ -355,6 +362,16 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     void set_s3select_processing_callback(std::function<int(void)>& f)
     {//purpose: execute s3select statement on matching row (according to filters)
       m_s3select_processing = f;
+    }
+
+    void set_push_per_star_operation_callback( std::function <int(s3selectEngine::scratch_area::json_key_value_t&)> cb)
+    {
+      m_star_operation_cb = cb;
+    }
+
+    void set_star_operation()
+    {
+      m_star_operation = true;
     }
 
     int process_json_buffer(char* json_buffer,size_t json_buffer_sz, bool end_of_stream=false)

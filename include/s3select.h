@@ -429,6 +429,8 @@ private:
   s3select_allocator m_s3select_allocator;
 
   bool aggr_flow;
+  
+  bool m_json_query;
 
 #define BOOST_BIND_ACTION( push_name ) boost::bind( &push_name::operator(), g_ ## push_name, const_cast<s3select*>(&self), _1, _2)
 
@@ -487,6 +489,9 @@ public:
         
       }
     }
+    
+    m_json_query = (m_actionQ.json_from_clause.size() != 0);
+    
     return 0;
   }
 
@@ -594,7 +599,7 @@ public:
 
   bool is_json_query()
   {
-    return m_actionQ.json_from_clause.size() != 0;
+    return m_json_query;
   }
 
   ~s3select()
@@ -823,7 +828,6 @@ void push_json_from_clause::builder(s3select* self, const char* a, const char* b
   std::string token(a, b),table_name,alias_name;
 
   //TODO handle the star-operation ('*') in from-clause. build the parameters for json-reader search-api's.
-  //remove s3object[*]
   std::vector<std::string> variable_key_path;
   const char* delimiter = ".";
 
@@ -1916,12 +1920,12 @@ public:
 
     if (m_where_clause)
     {
-      m_where_clause->traverse_and_apply(m_sa, m_s3_select->get_aliases());
+      m_where_clause->traverse_and_apply(m_sa, m_s3_select->get_aliases(), m_s3_select->is_json_query());
     }
 
     for (auto& p : m_projections)
     {
-      p->traverse_and_apply(m_sa, m_s3_select->get_aliases());
+      p->traverse_and_apply(m_sa, m_s3_select->get_aliases(), m_s3_select->is_json_query());
     }
     m_is_to_aggregate = true;//TODO not correct. should be set upon end-of-stream
     m_aggr_flow = m_s3_select->is_aggregate_query();
@@ -2532,21 +2536,28 @@ private:
   size_t m_processed_bytes;
   bool m_end_of_stream;
   std::string s3select_result;
+  size_t m_row_count;
+  bool star_operation_ind;
 
 public:
     
-  json_object(s3select* query):base_s3object(query),m_processed_bytes(0),m_end_of_stream(false)
+  json_object(s3select* query):base_s3object(query),m_processed_bytes(0),m_end_of_stream(false),m_row_count(0),star_operation_ind(false)
   {
-    //setting the container for all exact-filters, to be extracted by the json reader    
-    JsonHandler.set_exact_match_filters(query->get_json_variables_key_path());
-
     std::function<int(void)> f_sql = [this](void){auto res = sql_execution_on_row_cb();return res;};
     std::function<int(s3selectEngine::value&, int)> 
       f_push_to_scratch = [this](s3selectEngine::value& value,int json_var_idx){return push_into_scratch_area_cb(value,json_var_idx);};
+    std::function <int(s3selectEngine::scratch_area::json_key_value_t&)>
+      f_push_key_value_into_scratch_area_per_star_operation = [this](s3selectEngine::scratch_area::json_key_value_t& key_value)
+								{return push_key_value_into_scratch_area_per_star_operation(key_value);};
 
-
-    JsonHandler.set_s3select_processing_callback(f_sql);//calling to getMatchRow
-    JsonHandler.set_exact_match_callback(f_push_to_scratch);//upon excat match push to scratch area 
+    //setting the container for all exact-filters, to be extracted by the json reader    
+    JsonHandler.set_exact_match_filters(query->get_json_variables_key_path());
+    //calling to getMatchRow. processing a single row per each call.
+    JsonHandler.set_s3select_processing_callback(f_sql);
+    //upon excat match between input-json-key-path and sql-statement-variable-path the callback pushes to scratch area 
+    JsonHandler.set_exact_match_callback(f_push_to_scratch);
+    //upon star-operation(in statemenet) the callback pushes the key-path and value into scratch-area
+    JsonHandler.set_push_per_star_operation_callback(f_push_key_value_into_scratch_area_per_star_operation);
 
     //setting the from clause path 
     if(query->getAction()->json_from_clause[0] == JSON_ROOT_OBJECT)
@@ -2555,7 +2566,24 @@ public:
     }
     JsonHandler.set_prefix_match(query->getAction()->json_from_clause);
 
-    m_sa->set_parquet_type();
+    for (auto& p : m_projections)
+    {
+      if(p->is_statement_contain_star_operation())
+      {
+	star_operation_ind=true;
+	break;
+      }
+    }
+
+    if(star_operation_ind)
+    {
+      JsonHandler.set_star_operation();
+      //upon star-operation the key-path is extracted with the value, each key-value displayed in a seperate row.
+      //the return results end with a line contains the row-number.
+      m_csv_defintion.output_column_delimiter = m_csv_defintion.output_row_delimiter;
+    }
+
+    m_sa->set_parquet_type();//TODO json type
   }
 
 private:
@@ -2574,8 +2602,16 @@ private:
   {
       //execute statement on row 
       //create response (TODO callback)
-      
+
+      size_t result_len = s3select_result.size();     
       auto status = getMatchRow(s3select_result);
+      m_sa->clear_data(); 
+      if(star_operation_ind && (s3select_result.size() != result_len))
+      {//as explained above the star-operation is displayed differently
+	std::string end_of_row;
+	end_of_row = "#=== " + std::to_string(m_row_count++) + " ===#\n";
+	s3select_result.append(end_of_row);
+      }
       return status;
   }
 
@@ -2587,12 +2623,19 @@ private:
     return 0;
   }
 
+  int push_key_value_into_scratch_area_per_star_operation(s3selectEngine::scratch_area::json_key_value_t& key_value)
+  {
+    m_sa->get_star_operation_cont()->push_back( key_value );
+    return 0;
+  }
+
 public:
 
   int run_s3select_on_stream(std::string& result, const char* json_stream, size_t stream_length, size_t obj_size)
   {
     int status=0;
     m_processed_bytes += stream_length;
+    s3select_result.clear();
 
     if(!stream_length || !stream_length)//TODO m_processed_bytes(?)
     {//last processing cycle

@@ -377,13 +377,14 @@ public:
     return m_func_impl;
   }
 
-  void traverse_and_apply(scratch_area* sa, projection_alias* pa) override
+  void traverse_and_apply(scratch_area* sa, projection_alias* pa,bool json_statement) override
   {
     m_scratch = sa;
     m_aliases = pa;
+    m_json_statement = json_statement;
     for (base_statement* ba : arguments)
     {
-      ba->traverse_and_apply(sa, pa);
+      ba->traverse_and_apply(sa, pa, json_statement);
     }
   }
 
@@ -2412,6 +2413,29 @@ bool base_statement::is_nested_aggregate(bool &aggr_flow) const
           return i->is_nested_aggregate(aggr_flow);
         }
       }
+  }
+
+  return false;
+}
+
+bool base_statement::is_statement_contain_star_operation() const
+{
+  if(is_star_operation())
+    return true;
+  
+  if(left())
+    return left()->is_statement_contain_star_operation();
+
+  if(right())
+    return right()->is_statement_contain_star_operation();
+
+  if(is_function())
+  {
+    for(auto a : dynamic_cast<__function*>(const_cast<base_statement*>(this))->get_arguments())
+    {
+      if(a->is_star_operation())
+        return true;
+    }
   }
 
   return false;

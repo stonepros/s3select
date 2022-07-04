@@ -428,6 +428,8 @@ public:
 
 private:
   value_t __val;
+  //JSON query has a unique structure, the variable-name reside on input. there are cases were it should be extracted.
+  std::vector<std::string> m_json_key;
   std::string m_to_string;
   //std::basic_string<char,std::char_traits<char>,ChunkAllocator<char,256>> m_to_string;
   std::string m_str_value;
@@ -552,6 +554,11 @@ public:
 
   value_En_t _type() const { return type; }
 
+  void set_json_key_path(std::vector<std::string>& key_path)
+  {
+    m_json_key = key_path;
+  }
+
   const char* to_string()  //TODO very intensive , must improve this
   {
 
@@ -613,6 +620,20 @@ public:
       m_to_string.assign( __val.str );
     }
 
+    if(m_json_key.size())
+    {
+      std::string key_path;
+      for(auto& p : m_json_key)
+      {//TODO upon star-operation key-path assignment is very intensive
+	key_path.append(p);
+	key_path.append(".");
+      }
+
+      key_path.append(" : ");
+      key_path.append(m_to_string);
+      m_to_string = key_path;
+    }
+
     return  m_to_string.c_str();
   }
 
@@ -627,6 +648,8 @@ public:
     {
       this->__val = o.__val;
     }
+
+    this->m_json_key = o.m_json_key;
 
     this->type = o.type;
   }
@@ -644,6 +667,8 @@ public:
     }
 
     this->type = o.type;
+
+    this->m_json_key = o.m_json_key;
 
     return *this;
   }
@@ -1056,7 +1081,13 @@ private:
   bool parquet_type;
   char str_buff[4096];
   uint16_t buff_loc;
+
+
 public:
+
+  typedef std::pair<std::vector<std::string>,value> json_key_value_t;
+  typedef std::vector< json_key_value_t > json_star_op_cont_t;
+  json_star_op_cont_t m_json_star_operation;
 
   scratch_area():m_upper_bound(-1),parquet_type(false),buff_loc(0)
   {//TODO it should resize dynamicly
@@ -1067,6 +1098,17 @@ public:
   {
     delete m_schema_values;
   }
+
+  json_star_op_cont_t* get_star_operation_cont()
+  {
+    return &m_json_star_operation;
+  }
+ 
+  void clear_data()
+  {
+    m_json_star_operation.clear();
+    (*m_schema_values).clear();
+  } 
 
   void set_column_pos(const char* n, int pos)//TODO use std::string
   {
@@ -1234,10 +1276,12 @@ protected:
   int m_eval_stack_depth;
   bool m_skip_non_aggregate_op;
   value value_na;
+  //JSON queries has different syntax from other data-sources(Parquet,CSV)
+  bool m_json_statement;
 
 public:
   base_statement():m_scratch(nullptr), is_last_call(false), m_is_cache_result(false),
-  m_projection_alias(nullptr), m_eval_stack_depth(0), m_skip_non_aggregate_op(false) {}
+  m_projection_alias(nullptr), m_eval_stack_depth(0), m_skip_non_aggregate_op(false),m_json_statement(false) {}
 
   virtual value& eval()
   {
@@ -1264,8 +1308,6 @@ public:
 
   virtual value& eval_internal() = 0;
   
-  bool parquet_type; //TODO enum switch (csv,json,parquet,other)
-
 public:
   virtual base_statement* left() const
   {
@@ -1278,17 +1320,19 @@ public:
   virtual std::string print(int ident) =0;//TODO complete it, one option to use level parametr in interface ,
   virtual bool semantic() =0;//done once , post syntax , traverse all nodes and validate semantics.
 
-  virtual void traverse_and_apply(scratch_area* sa, projection_alias* pa)
+  virtual void traverse_and_apply(scratch_area* sa, projection_alias* pa,bool json_statement)
   {
     m_scratch = sa;
     m_aliases = pa;
+    m_json_statement = json_statement;
+
     if (left())
     {
-      left()->traverse_and_apply(m_scratch, m_aliases);
+      left()->traverse_and_apply(m_scratch, m_aliases, json_statement);
     }
     if (right())
     {
-      right()->traverse_and_apply(m_scratch, m_aliases);
+      right()->traverse_and_apply(m_scratch, m_aliases, json_statement);
     }
   }
 
@@ -1316,6 +1360,11 @@ public:
     return false;
   }
 
+  virtual bool is_star_operation() const
+  {
+    return false;
+  }
+
   virtual void resolve_node()
   {//part of semantic analysis(TODO maybe semantic method should handle this)
     if (left())
@@ -1328,11 +1377,17 @@ public:
     }
   }
 
+  bool is_json_statement()
+  {
+    return m_json_statement;
+  }
+
   bool is_function() const;
   const base_statement* get_aggregate() const;
   bool is_nested_aggregate(bool&) const;
   bool is_column_reference() const;
   bool mark_aggreagtion_subtree_to_execute();
+  bool is_statement_contain_star_operation() const;
 
 #ifdef _ARROW_EXIST
   void extract_columns(parquet_file_parser::column_pos_t &cols,const uint16_t max_columns);
@@ -1562,6 +1617,15 @@ public:
     return false;
   }
 
+  virtual bool is_star_operation() const
+  {
+    if(m_var_type == var_t::STAR_OPERATION)
+    {
+      return true;
+    }
+    return false;
+  }
+
   value& get_value()
   {
     return var_value; //TODO is it correct
@@ -1582,9 +1646,11 @@ public:
     return var_value.type;
   }
 
-  //TODO star-operation for JSON 
-  value& star_operation()   //purpose return content of all columns in a input stream
-  {
+  value& star_operation()
+  {//purpose return content of all columns in a input stream
+    if(is_json_statement()) 
+	return json_star_operation();
+
     size_t pos=0;
     size_t num_of_columns = m_scratch->get_num_of_columns();
     var_value.multiple_values.clear(); //TODO var_value.clear()??
@@ -1607,6 +1673,21 @@ public:
 
       pos += len;
       pos ++;
+    }
+
+    var_value.type = value::value_En_t::MULTIPLE_VALUES;
+
+    return var_value;
+  }
+
+  value& json_star_operation()
+  {//purpose: per JSON star-operation it needs to get column-name(full-path) and its value
+
+    var_value.multiple_values.clear(); 
+    for(auto& key_value : *m_scratch->get_star_operation_cont())
+    {
+      key_value.second.set_json_key_path(key_value.first);
+      var_value.multiple_values.push_value(&key_value.second);
     }
 
     var_value.type = value::value_En_t::MULTIPLE_VALUES;
