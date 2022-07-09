@@ -952,25 +952,29 @@ void push_json_variable::builder(s3select* self, const char* a, const char* b) c
 {//purpose: handle the use case of json-variable structure (_1.a.b.c)
 
   std::string token(a, b);
+  std::vector<std::string> variable_key_path;
 
   if(token.find("_1") != std::string::npos)
   {//TODO handle the use case upon no "_1"
     token = token.substr(token.find("_1")+3);
   }
 
-  std::vector<std::string> variable_key_path;
-  const char* delimiter = ".";
-  char* path_part = strdup(token.data());  
-
-  path_part = std::strtok(path_part, delimiter);
-  while (path_part) {
-	std::string part=path_part;
-	variable_key_path.push_back(part);	
-        path_part = std::strtok(nullptr, delimiter);
+  while(token.size())
+  {
+      auto pos = token.find(".");
+      if(pos != std::string::npos)
+      {
+	variable_key_path.push_back(token.substr(0,pos));
+	token = token.substr(pos+1,token.size());
+      }
+      else
+      {
+	variable_key_path.push_back(token);
+	token = "";
+      }
   }
 
   variable* v = nullptr;
-  free(path_part);
 
   //the following flow determine the index per json variable reside on statement.
   //per each discovered json_variable, it search the json-variables-vector whether it already exists.
@@ -2538,6 +2542,7 @@ private:
   std::string s3select_result;
   size_t m_row_count;
   bool star_operation_ind;
+  std::string m_error_description;
 
 public:
     
@@ -2603,8 +2608,17 @@ private:
       //execute statement on row 
       //create response (TODO callback)
 
-      size_t result_len = s3select_result.size();     
-      auto status = getMatchRow(s3select_result);
+      size_t result_len = s3select_result.size();
+      int status=0;
+      try{
+	status = getMatchRow(s3select_result);
+      }
+      catch(s3selectEngine::base_s3select_exception& e)
+      {
+	sql_error_handling(e,s3select_result);
+	status = -1;
+      }
+
       m_sa->clear_data(); 
       if(star_operation_ind && (s3select_result.size() != result_len))
       {//as explained above the star-operation is displayed differently
@@ -2629,6 +2643,18 @@ private:
     return 0;
   }
 
+  void sql_error_handling(s3selectEngine::base_s3select_exception& e,std::string& result)
+  {
+    //the JsonHandler makes the call to SQL processing, upon a failure to procees the SQL statement, 
+    //the error-handling takes care of the error flow.
+    m_error_description = e.what();
+    m_error_count++;
+    s3select_result.append(std::to_string(m_error_count));
+    s3select_result += " : ";
+    s3select_result.append(m_error_description);
+    s3select_result += m_csv_defintion.output_row_delimiter;
+  }
+
 public:
 
   int run_s3select_on_stream(std::string& result, const char* json_stream, size_t stream_length, size_t obj_size)
@@ -2637,7 +2663,7 @@ public:
     m_processed_bytes += stream_length;
     s3select_result.clear();
 
-    if(!stream_length || !stream_length)//TODO m_processed_bytes(?)
+    if(!stream_length || !json_stream)//TODO m_processed_bytes(?)
     {//last processing cycle
       JsonHandler.process_json_buffer(0, 0, true);//TODO end-of-stream = end-of-row
       m_end_of_stream = true;

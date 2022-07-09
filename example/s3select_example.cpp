@@ -550,7 +550,7 @@ int run_on_single_query(const char* fname, const char* query)
   auto status = query_ast.parse_query(query); 
   if(status<0)	
   {
-    std::cout << "failed to parse query" << std::endl;
+    std::cout << "failed to parse query : " << query_ast.get_error_description() << std::endl;
     return -1;
   }
    

@@ -153,8 +153,7 @@ class JsonParserHandler : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     {
       NA,
       OBJECT_START_ROW,
-      ARRAY_START_ROW,
-      END_ROW
+      ARRAY_START_ROW
     };
 
     row_state state = row_state::NA;
