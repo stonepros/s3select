@@ -830,19 +830,21 @@ void push_json_from_clause::builder(s3select* self, const char* a, const char* b
   //TODO handle the star-operation ('*') in from-clause. build the parameters for json-reader search-api's.
   std::vector<std::string> variable_key_path;
   const char* delimiter = ".";
+  auto pos = token.find(delimiter);
 
-
-  if(token.find(delimiter) != std::string::npos)
+  if(pos != std::string::npos)
   {
-    char* path_part = strdup(token.data() + strlen(JSON_ROOT_OBJECT)+1);  
-
-    path_part = std::strtok(path_part, delimiter);
-    while (path_part) {
-	std::string part=path_part;
-	variable_key_path.push_back(part);	
-        path_part = std::strtok(nullptr, delimiter);
-    }
-    free(path_part);
+    token = token.substr(strlen(JSON_ROOT_OBJECT)+1,token.size());
+    pos = token.find(delimiter);
+    do
+    {
+      variable_key_path.push_back(token.substr(0,pos));
+      if(pos != std::string::npos)
+	token = token.substr(pos+1,token.size());
+      else 
+	token = "";
+      pos = token.find(delimiter);
+    }while(token.size());
   }
   else
   {
