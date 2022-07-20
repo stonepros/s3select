@@ -1081,7 +1081,7 @@ private:
   bool parquet_type;
   char str_buff[4096];
   uint16_t buff_loc;
-
+  int max_json_idx;
 
 public:
 
@@ -1089,7 +1089,7 @@ public:
   typedef std::vector< json_key_value_t > json_star_op_cont_t;
   json_star_op_cont_t m_json_star_operation;
 
-  scratch_area():m_upper_bound(-1),parquet_type(false),buff_loc(0)
+  scratch_area():m_upper_bound(-1),parquet_type(false),buff_loc(0),max_json_idx(-1)
   {//TODO it should resize dynamicly
     m_schema_values = new std::vector<value>(128,value(""));
   }
@@ -1107,7 +1107,10 @@ public:
   void clear_data()
   {
     m_json_star_operation.clear();
-    (*m_schema_values).clear();
+    for(int i=0;i<=max_json_idx;i++)
+    {
+      (*m_schema_values)[i].setnull();
+    }
   } 
 
   void set_column_pos(const char* n, int pos)//TODO use std::string
@@ -1201,6 +1204,10 @@ public:
 
   int update_json_varible(value v,int json_idx)
   {
+    if(json_idx>max_json_idx)
+    {
+      max_json_idx = json_idx;
+    }
     (*m_schema_values)[ json_idx ] = v;
     return 0;
   }
