@@ -477,6 +477,9 @@ public:
     __val.str = m_str_value.data();
   }
 
+  explicit value(std::nullptr_t) : type(value_En_t::S3NULL)
+  {}
+
   ~value()
   {//TODO should be a part of the cleanup routine(__function::push_for_cleanup)
     multiple_values.values.clear();
@@ -1091,7 +1094,7 @@ public:
 
   scratch_area():m_upper_bound(-1),parquet_type(false),buff_loc(0),max_json_idx(-1)
   {//TODO it should resize dynamicly
-    m_schema_values = new std::vector<value>(128,value(""));
+    m_schema_values = new std::vector<value>(128,value(nullptr));
   }
 
   ~scratch_area()
