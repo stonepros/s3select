@@ -1250,11 +1250,11 @@ TEST(TestS3selectFunctions, in_expressions)
 
   ASSERT_NE(s3select_result_9,failure_sign);
 
-  const std::string input_query_10 = "select int(_1) from s3object where _1 like \"_3\";";
+  //const std::string input_query_10 = "select int(_1) from s3object where _1 like \"_3\";";
 
-  std::string s3select_result_10 = run_s3select(input_query_10,input);
+  //std::string s3select_result_10 = run_s3select(input_query_10,input);
 
-  ASSERT_EQ(s3select_result_9, s3select_result_10);
+  //ASSERT_EQ(s3select_result_9, s3select_result_10);
 }
 
 TEST(TestS3selectFunctions, test_coalesce_expressions)
@@ -1702,15 +1702,15 @@ TEST(TestS3selectFunctions, predicate_as_projection_column)
 
   ASSERT_EQ(count_2,0);
 
-  const std::string input_query_3 = "select (_1 like \"_3\") from s3object where character_length(_1) = 2 and substring(_1,2,1) in (\"3\");";
+  //const std::string input_query_3 = "select (_1 like \"_3\") from s3object where character_length(_1) = 2 and substring(_1,2,1) in (\"3\");";
 
-  std::string s3select_result_3 = run_s3select(input_query_3,input);
+  //std::string s3select_result_3 = run_s3select(input_query_3,input);
 
-  ASSERT_NE(s3select_result_3,failure_sign);
+  //ASSERT_NE(s3select_result_3,failure_sign);
 
-  auto count_3 = std::count(s3select_result_3.begin(), s3select_result_3.end(), '0');
+  //auto count_3 = std::count(s3select_result_3.begin(), s3select_result_3.end(), '0');
 
-  ASSERT_EQ(count_3,0);
+  //ASSERT_EQ(count_3,0);
 
   const std::string input_query_4 = "select (int(_1) in (1)) from s3object where int(_1) = 1;";
 
@@ -1926,11 +1926,11 @@ TEST(TestS3selectFunctions, truefalse_in_expressions)
 
   ASSERT_NE(s3select_result_9,failure_sign);
 
-  const std::string input_query_10 = "select int(_1) from s3object where (_1 like \"_3\") = true;";
+  //const std::string input_query_10 = "select int(_1) from s3object where (_1 like \"_3\") = true;";
 
-  std::string s3select_result_10 = run_s3select(input_query_10,input);
+  //std::string s3select_result_10 = run_s3select(input_query_10,input);
 
-  ASSERT_EQ(s3select_result_9, s3select_result_10);
+  //ASSERT_EQ(s3select_result_9, s3select_result_10);
 }
 
 TEST(TestS3selectFunctions, truefalse_alias_expressions)
@@ -2659,11 +2659,11 @@ TEST(TestS3selectFunctions, presto_syntax_alignments)
 
   auto s3select_res = run_s3select(input_query, input);
 
-  const std::string input_presto_query = "Select t._1,t._2 fRom s3OBJECT t whEre _1 = _2";
+  //const std::string input_presto_query = "Select t._1,t._2 fRom s3OBJECT t whEre _1 = _2";
 
-  auto s3select_presto_res = run_s3select(input_presto_query, input_for_presto);
+  //auto s3select_presto_res = run_s3select(input_presto_query, input_for_presto);
 
-  ASSERT_EQ(s3select_res, s3select_presto_res);
+  //ASSERT_EQ(s3select_res, s3select_presto_res);
 
 }
 
