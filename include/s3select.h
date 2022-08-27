@@ -1949,7 +1949,7 @@ protected:
 public:
   s3select_csv_definitions m_csv_defintion;//TODO add method for modify
 
-  explicit base_s3object(s3select* m)
+  void set_base_defintions(s3select* m)
   {	
     m_s3_select=m;
     m_sa=m_s3_select->get_scratch_area();
@@ -1968,6 +1968,16 @@ public:
     }
     m_is_to_aggregate = true;//TODO not correct. should be set upon end-of-stream
     m_aggr_flow = m_s3_select->is_aggregate_query();
+  }
+
+  base_s3object():m_sa(nullptr),m_is_to_aggregate(false),m_where_clause(nullptr),m_s3_select(nullptr),m_error_count(0){}
+
+  explicit base_s3object(s3select* m)
+  {
+    if(m)
+	{
+        set_base_defintions(m);
+	}
   }
 
   virtual bool is_end_of_stream() {return false;}
@@ -2147,9 +2157,10 @@ public:
   {
     if(m_s3_select != nullptr) 
     {
-      return;
+      //return;
     }
 
+    set_base_defintions(s3_query);
     m_csv_defintion = csv;
   }
 
