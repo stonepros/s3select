@@ -2271,6 +2271,31 @@ public:
       m_error_description = "out of memory";
       return -1;
     }
+    catch(io::error::escaped_char_missing& err)
+    {
+      m_error_description = "failure while csv parsing";
+      return -1;
+    }
+	catch(io::error::escaped_string_not_closed& err)
+    {
+      m_error_description = "failure while csv parsing";
+      return -1;
+    }
+	catch(io::error::line_length_limit_exceeded& err)
+    {
+      m_error_description = "failure while csv parsing";
+      return -1;
+    }
+	catch(io::error::with_file_name& err)
+    {
+      m_error_description = "failure while csv parsing";
+      return -1;
+    }
+	catch(io::error::with_file_line& err)
+    {
+      m_error_description = "failure while csv parsing";
+      return -1;
+    }
 
     return status;
   }
@@ -2302,7 +2327,7 @@ private:
       run_s3select_on_object(result, merge_line.c_str(), merge_line.length(), false, false, false);
     }
 
-    if (csv_stream[stream_length - 1] != m_csv_defintion.row_delimiter)
+    if (stream_length && csv_stream[stream_length - 1] != m_csv_defintion.row_delimiter)
     {
       //in case of "broken" last line
       char* p_obj_chunk = (char*)&(csv_stream[stream_length - 1]);
