@@ -146,7 +146,7 @@ public:
     _msg = n;
   }
 
-  virtual const char* what()
+  virtual const char* what() const _GLIBCXX_NOTHROW
   {
     return _msg.c_str();
   }
