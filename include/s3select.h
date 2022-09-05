@@ -2723,7 +2723,7 @@ private:
   JsonParserHandler JsonHandler;
   size_t m_processed_bytes;
   bool m_end_of_stream;
-  std::string s3select_result;
+  s3select_result m_result;
   size_t m_row_count;
   bool star_operation_ind;
   std::string m_error_description;
@@ -2792,23 +2792,23 @@ private:
       //execute statement on row 
       //create response (TODO callback)
 
-      size_t result_len = s3select_result.size();
+      size_t result_len = m_result.size();
       int status=0;
       try{
-	status = getMatchRow(s3select_result);
+	status = getMatchRow(m_result);
       }
       catch(s3selectEngine::base_s3select_exception& e)
       {
-	sql_error_handling(e,s3select_result);
+	sql_error_handling(e,m_result.str());
 	status = -1;
       }
 
       m_sa->clear_data(); 
-      if(star_operation_ind && (s3select_result.size() != result_len))
+      if(star_operation_ind && (m_result.size() != result_len))
       {//as explained above the star-operation is displayed differently
 	std::string end_of_row;
 	end_of_row = "#=== " + std::to_string(m_row_count++) + " ===#\n";
-	s3select_result.append(end_of_row);
+	m_result.append(end_of_row);
       }
       return status;
   }
@@ -2833,10 +2833,10 @@ private:
     //the error-handling takes care of the error flow.
     m_error_description = e.what();
     m_error_count++;
-    s3select_result.append(std::to_string(m_error_count));
-    s3select_result += " : ";
-    s3select_result.append(m_error_description);
-    s3select_result += m_csv_defintion.output_row_delimiter;
+    m_result.append(std::to_string(m_error_count));
+    m_result.append(std::string(" : "));
+    m_result.append(m_error_description);
+    m_result.append(&m_csv_defintion.output_row_delimiter,1);
   }
 
 public:
@@ -2845,21 +2845,21 @@ public:
   {
     int status=0;
     m_processed_bytes += stream_length;
-    s3select_result.clear();
+    m_result.clear();
 
     if(!stream_length || !json_stream)//TODO m_processed_bytes(?)
     {//last processing cycle
       JsonHandler.process_json_buffer(0, 0, true);//TODO end-of-stream = end-of-row
       m_end_of_stream = true;
       sql_execution_on_row_cb();
-      result = s3select_result;
+      result = m_result.str();
       return 0;
     }
 
     try{
     //the handler is processing any buffer size and return results per each buffer
       status = JsonHandler.process_json_buffer((char*)json_stream, stream_length);
-      result = s3select_result;//TODO remove this result copy
+      result = m_result.str();//TODO remove this result copy
     }
     catch(std::exception &e)
     {
@@ -2877,6 +2877,8 @@ public:
   }
 
   ~json_object() = default;
+
+};
 
 class merge_results : public base_s3object
 {//purpose: upon processing several stream on a single aggregate query, this object should merge results.

@@ -1,7 +1,7 @@
 add_executable(s3select_example s3select_example.cpp)
 target_include_directories(s3select_example PUBLIC ../include ../rapidjson/include)
 add_executable(s3select_scaleup s3select_scaleup.cpp)
-target_include_directories(s3select_scaleup PUBLIC ../include)
+target_include_directories(s3select_scaleup PUBLIC ../include ../rapidjson/include)
 
 find_package(Arrow QUIET)
 

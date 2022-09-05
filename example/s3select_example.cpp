@@ -458,6 +458,7 @@ int run_on_localFile(char* input_query)
   s3select_result result;
   s3selectEngine::csv_object::csv_defintions csv;
   csv.use_header_info = false;
+  bool do_aggregate = false;
   //csv.column_delimiter='|';
   //csv.row_delimiter='\t';
 

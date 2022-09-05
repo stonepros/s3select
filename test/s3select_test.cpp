@@ -825,8 +825,7 @@ void test_single_column_single_row(const char* input_query,const char* expected_
 #ifdef _ARROW_EXIST
     parquet_csv_report_error(parquet_result.str(),csv_result.str());
 #endif
-    json_csv_report_error(json_result, s3select_result);
-    ASSERT_EQ(s3select_result, std::string(expected_result));
+    json_csv_report_error(json_result, csv_result.str());
     ASSERT_EQ(csv_result.str(), std::string(expected_result));
 }
 
@@ -2664,7 +2663,8 @@ void generate_csv_quote_and_escape(std::string& out, char quote = '"', char escp
 
 TEST(TestS3selectFunctions, csv_quote_string_and_escape_char)
 {
-  std::string input, s3select_result_1, s3select_result_2, s3select_result_3;
+  std::string input; 
+  s3select_result s3select_result_1, s3select_result_2, s3select_result_3;
   csv_object::csv_defintions csv;
   generate_csv_quote_and_escape(input);
   s3select s3select_syntax1, s3select_syntax2, s3select_syntax3;
@@ -2683,7 +2683,7 @@ TEST(TestS3selectFunctions, csv_quote_string_and_escape_char)
   s3selectEngine::csv_object s3_csv_object_second(&s3select_syntax2, csv);
   s3_csv_object_second.run_s3select_on_object(s3select_result_2, input.c_str(), input.size(), false, false, true);
 
-  EXPECT_EQ(s3select_result_1, s3select_result_2);
+  EXPECT_EQ(s3select_result_1.str(), s3select_result_2.str());
 
   csv.escape_char = '\0';
   csv.quot_char = '\0';
@@ -2695,13 +2695,13 @@ TEST(TestS3selectFunctions, csv_quote_string_and_escape_char)
   s3selectEngine::csv_object s3_csv_object_third(&s3select_syntax3, csv);
   s3_csv_object_third.run_s3select_on_object(s3select_result_3, input.c_str(), input.size(), false, false, true);
 
-  EXPECT_EQ(s3select_result_3, input);
+  EXPECT_EQ(s3select_result_3.str(), input);
 }
 
 TEST(TestS3selectFunctions, csv_comment_line_and_trim_char)
 {
   std::string input;
-  std::string s3select_result_1, s3select_result_2;
+  s3select_result s3select_result_1, s3select_result_2;
   generate_csv_quote_and_escape(input);
   s3select s3select_syntax;
 
@@ -2725,7 +2725,7 @@ TEST(TestS3selectFunctions, csv_comment_line_and_trim_char)
   s3selectEngine::csv_object s3_csv_object_second(&s3select_syntax, csv);
   s3_csv_object_second.run_s3select_on_object(s3select_result_2, input.c_str(), input.size(), false, false, true);
 
-  EXPECT_EQ(s3select_result_1, s3select_result_2);
+  EXPECT_EQ(s3select_result_1.str(), s3select_result_2.str());
 }
 
 TEST(TestS3selectFunctions, presto_syntax_alignments)

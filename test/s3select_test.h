@@ -691,7 +691,7 @@ std::string run_s3select(std::string expression,std::string input, const char* j
   }
 
   run_json_query(json_query, js, json_result);
-  json_csv_report_error(json_result, s3select_result);
+  json_csv_report_error(json_result, csv_result.str());
 
   return csv_result.str();
 }

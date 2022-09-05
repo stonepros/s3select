@@ -1335,6 +1335,8 @@ public:
   m_projection_alias(nullptr), m_eval_stack_depth(0), m_skip_non_aggregate_op(false),
   execution_phase(multiple_executions_en::NA){}
 
+  multiple_executions_en execution_phase;
+
   virtual value& eval()
   {
     //purpose: on aggregation flow to run only the correct subtree(aggregation subtree)
