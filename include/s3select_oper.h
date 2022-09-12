@@ -575,9 +575,9 @@ public:
     {
       if (type == value_En_t::DECIMAL)
       {
-        m_to_string.assign( boost::lexical_cast<std::string>(__val.num) );
+        m_to_string = boost::lexical_cast<std::string>(__val.num);
       }
-      if (type == value_En_t::BOOL)
+      else if (type == value_En_t::BOOL)
       {
         if(__val.num == 0)
         {
