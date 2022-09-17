@@ -590,7 +590,7 @@ public:
       }
       else if(type == value_En_t::FLOAT)
       {
-        m_to_string = boost::lexical_cast<std::string>(__val.dbl);
+        m_to_string = std::to_string(__val.dbl);
       }
       else if (type == value_En_t::TIMESTAMP)
       {
