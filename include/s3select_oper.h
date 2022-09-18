@@ -568,17 +568,13 @@ public:
     m_json_key = key_path;
   }
 
-  const char* to_string()  //TODO very intensive , must improve this
+  void to_string_decimal()
   {
-
-    if (type != value_En_t::STRING)
-    {
-      if (type == value_En_t::DECIMAL)
-      {
-        m_to_string = boost::lexical_cast<std::string>(__val.num);
-      }
-      else if (type == value_En_t::BOOL)
-      {
+	m_to_string = boost::lexical_cast<std::string>(__val.num);
+  }
+  
+  void to_string_bool()
+  {
         if(__val.num == 0)
         {
           m_to_string.assign("false");
@@ -587,13 +583,15 @@ public:
         {
           m_to_string.assign("true");
         }
-      }
-      else if(type == value_En_t::FLOAT)
-      {
+  }
+
+  void to_string_float()
+  {
         m_to_string = std::to_string(__val.dbl);
-      }
-      else if (type == value_En_t::TIMESTAMP)
-      {
+  }
+
+  void to_string_timestamp()
+  {
         boost::posix_time::ptime new_ptime;
         boost::posix_time::time_duration td;
         bool flag;
@@ -618,6 +616,72 @@ public:
                         std::string(2 - tz_hour.length(), '0') +  tz_hour + ":"
                         + std::string(2 - tz_mint.length(), '0') +  tz_mint;
 	}
+   }
+  
+  void to_string_str()
+  {
+      m_to_string.assign( __val.str );
+  }
+  
+  const char* to_string()  //TODO very intensive , must improve this
+  {
+
+    if (type != value_En_t::STRING)
+    {
+      if (type == value_En_t::DECIMAL)
+      {
+        //m_to_string = boost::lexical_cast<std::string>(__val.num);
+	to_string_decimal();
+      }
+      else if (type == value_En_t::BOOL)
+      {
+	      to_string_bool();
+#if 0
+        if(__val.num == 0)
+        {
+          m_to_string.assign("false");
+        }
+        else
+        {
+          m_to_string.assign("true");
+        }
+#endif
+      }
+      else if(type == value_En_t::FLOAT)
+      {
+        //m_to_string = std::to_string(__val.dbl);
+	to_string_float();
+      }
+      else if (type == value_En_t::TIMESTAMP)
+      {
+	to_string_timestamp();
+#if 0
+        boost::posix_time::ptime new_ptime;
+        boost::posix_time::time_duration td;
+        bool flag;
+
+	std::tie(new_ptime, td, flag) = *__val.timestamp;
+
+	if (flag)
+	{
+          m_to_string =  to_iso_extended_string(new_ptime) + "Z";
+	}
+        else
+	{
+          std::string tz_hour = std::to_string(std::abs(td.hours()));
+          std::string tz_mint = std::to_string(std::abs(td.minutes()));
+	  std::string sign;
+          if (td.is_negative())
+            sign = "-";
+	  else
+            sign = "+";
+
+          m_to_string =  to_iso_extended_string(new_ptime) + sign +
+                        std::string(2 - tz_hour.length(), '0') +  tz_hour + ":"
+                        + std::string(2 - tz_mint.length(), '0') +  tz_mint;
+	}
+#endif
+
       }
       else if (type == value_En_t::S3NULL)
       {
@@ -626,7 +690,8 @@ public:
     }
     else
     {
-      m_to_string.assign( __val.str );
+      //m_to_string.assign( __val.str );
+      to_string_str();
     }
 
     if(m_json_key.size())
