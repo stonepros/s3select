@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cstring>
 #include <cmath>
+#include <set>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -430,10 +431,10 @@ private:
   value_t __val;
   //JSON query has a unique structure, the variable-name reside on input. there are cases were it should be extracted.
   std::vector<std::string> m_json_key;
-  //std::string m_to_string;
-  std::basic_string<char,std::char_traits<char>,ChunkAllocator<char,256>> m_to_string;
-  //std::string m_str_value;
-  std::basic_string<char,std::char_traits<char>,ChunkAllocator<char,256>> m_str_value;
+  std::string m_to_string;
+  //std::basic_string<char,std::char_traits<char>,ChunkAllocator<char,256>> m_to_string;
+  std::string m_str_value;
+  //std::basic_string<char,std::char_traits<char>,ChunkAllocator<char,256>> m_str_value;
 
 public:
   enum class value_En_t
@@ -1389,6 +1390,7 @@ public:
   bool is_column_reference() const;
   bool mark_aggreagtion_subtree_to_execute();
   bool is_statement_contain_star_operation() const;
+  void push_for_cleanup(std::set<base_statement*>&);
 
 #ifdef _ARROW_EXIST
   void extract_columns(parquet_file_parser::column_pos_t &cols,const uint16_t max_columns);
