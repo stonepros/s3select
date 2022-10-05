@@ -1804,58 +1804,76 @@ private:
     case parquet::Type::type::INT32:
       int32_reader = static_cast<parquet::Int32Reader *>(m_ColumnReader.get());
       try {
-        rows_read = int32_reader->ReadBatch(1, nullptr, nullptr,&i32_val, values_read);
+	rows_read = int32_reader->ReadBatch(1, &defintion_level, &repeat_level, &i32_val , values_read);
+      	if(defintion_level == 0)
+      	{
+		values->type = column_reader_wrap::parquet_type::PARQUET_NULL;
+      	} else
+      	{
+      		values->num = i32_val;
+      		values->type = column_reader_wrap::parquet_type::INT32;
+      	}
       }
       catch(std::exception &e)
       {
          throw std::runtime_error(error_msg(e).str());
       }
 
-      values->num = i32_val;
-      values->type = column_reader_wrap::parquet_type::INT32;
       break;
 
     case parquet::Type::type::INT64:
       int64_reader = static_cast<parquet::Int64Reader *>(m_ColumnReader.get());
       try{
-        rows_read = int64_reader->ReadBatch(1, nullptr, nullptr, (int64_t *)&(values->num), values_read);
+        rows_read = int64_reader->ReadBatch(1, &defintion_level, &repeat_level, (int64_t *)&(values->num), values_read);
+      	if(defintion_level == 0)
+      	{
+		values->type = column_reader_wrap::parquet_type::PARQUET_NULL;
+      	} else
+      	{
+      		values->type = column_reader_wrap::parquet_type::INT64;
+      	}
       }
       catch(std::exception &e)
       {
          throw std::runtime_error(error_msg(e).str());
       }
-      values->type = column_reader_wrap::parquet_type::INT64;
       break;
 
     case parquet::Type::type::DOUBLE:
-      try{
         double_reader = static_cast<parquet::DoubleReader *>(m_ColumnReader.get());
+      try{
+      	rows_read = double_reader->ReadBatch(1, &defintion_level, &repeat_level, (double *)&(values->dbl), values_read);
+      	if(defintion_level == 0)
+      	{
+		values->type = column_reader_wrap::parquet_type::PARQUET_NULL;
+      	} else
+      	{
+      		values->type = column_reader_wrap::parquet_type::DOUBLE;
+      	}
       }
       catch(std::exception &e)
       {
          throw std::runtime_error(error_msg(e).str());
       }
-      rows_read = double_reader->ReadBatch(1, nullptr, nullptr, (double *)&(values->dbl), values_read);
-      values->type = column_reader_wrap::parquet_type::DOUBLE;
       break;
 
     case parquet::Type::type::BYTE_ARRAY:
       byte_array_reader = static_cast<parquet::ByteArrayReader *>(m_ColumnReader.get());
       try{
         rows_read = byte_array_reader->ReadBatch(1, &defintion_level, &repeat_level, &str_value , values_read);
+      	if(defintion_level == 0)
+      	{	
+		values->type = column_reader_wrap::parquet_type::PARQUET_NULL;
+      	} else
+      	{
+		values->type = column_reader_wrap::parquet_type::STRING;
+      		values->str = (char*)str_value.ptr;
+      		values->str_len = str_value.len;
+      	}
       }
       catch(std::exception &e)
       {
          throw std::runtime_error(error_msg(e).str());
-      }
-      values->str = (char*)str_value.ptr;
-      values->str_len = str_value.len;
-      if(defintion_level == 0)
-      {
-	values->type = column_reader_wrap::parquet_type::PARQUET_NULL;
-      } else
-      {
-	values->type = column_reader_wrap::parquet_type::STRING;
       }
       break;
 
