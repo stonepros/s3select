@@ -2314,7 +2314,6 @@ private:
     //purpose: the cv data is "streaming", it may "cut" rows in the middle, in that case the "broken-line" is stores
     //for later, upon next chunk of data is streaming, the stored-line is merge with current broken-line, and processed.
     std::string tmp_buff;
-    m_processed_bytes += stream_length;
 
     m_skip_first_line = false;
 
@@ -2352,6 +2351,7 @@ private:
       stream_length -= m_last_line.length();
     }
 
+    m_processed_bytes += stream_length;
     return run_s3select_on_object(result, csv_stream, stream_length, m_skip_first_line, m_previous_line, (m_processed_bytes >= obj_size));
   }
 
