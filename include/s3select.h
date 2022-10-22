@@ -2360,8 +2360,8 @@ public:
   {
     if (do_aggregate && m_previous_line)
     {
-        stream_length += m_last_line.length();
-        m_last_line += csv_stream;
+	m_last_line.append(csv_stream,stream_length);
+        stream_length = m_last_line.length();
         m_stream = &m_last_line[0];
 	m_previous_line = false;
     }

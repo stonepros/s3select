@@ -2728,6 +2728,31 @@ TEST(TestS3selectFunctions, csv_comment_line_and_trim_char)
   EXPECT_EQ(s3select_result_1, s3select_result_2);
 }
 
+TEST(TestS3selectFunctions, csv_flow_with_binary_input)
+{
+  std::string input;
+  std::string s3select_result_1;
+  s3select s3select_syntax;
+
+  for(int i=0;i<1024*1024*40;i++)
+  {
+	input.append(1,rand()%16+1);
+
+	if(rand()%100 == 0) 
+		{input.append(1,0);}
+  }
+
+  const std::string input_query_1 = "select count(0) from s3object;";
+  int status = s3select_syntax.parse_query(input_query_1.c_str());
+  ASSERT_EQ(status, 0);
+
+  csv_object::csv_defintions csv;
+  s3selectEngine::csv_object s3_csv_object(&s3select_syntax, csv);
+  status = s3_csv_object.run_s3select_on_stream(s3select_result_1, input.c_str(), input.size(),input.size());
+  std::cout << "status =" << status << "error description" << s3_csv_object.get_error_description() << std::endl;
+
+}
+
 TEST(TestS3selectFunctions, presto_syntax_alignments)
 {
 /*
