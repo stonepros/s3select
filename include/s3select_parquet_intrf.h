@@ -100,7 +100,7 @@ ARROW_EXPORT
 }
 
 
-// RGWimpl and OSFile implements the access to storage objects, OSFile(filesystem files) RGWimpl( ceph S3 )
+// RGWimpl and OSFile implements the access to storage objects, OSFile(filesystem files) RGWimpl( stone S3 )
 // ObjectInterface(temporary) is "empty base class" enables injections of  access function to storage-objects 
 // ReadableFileImpl an implementation layer to ObjectInterface objects
 // ReadableFile a layer which call to ReadableFileImpl, enable runtime switching between implementations 
@@ -515,7 +515,7 @@ class MemoryPool;
 class Status;
 
 namespace io {
-namespace ceph {
+namespace stone {
 
 /// \brief An operating system file open in read-only mode.
 ///
@@ -574,7 +574,7 @@ class ARROW_EXPORT ReadableFile
 };
 
 
-} // namespace ceph
+} // namespace stone
 } // namespace io
 } // namespace arrow
 
@@ -583,7 +583,7 @@ class ARROW_EXPORT ReadableFile
 
 namespace arrow {
 namespace io {
-namespace ceph {
+namespace stone {
 
 class ReadableFile::ReadableFileImpl : public ObjectInterface {
  public:
@@ -596,7 +596,7 @@ class ReadableFile::ReadableFileImpl : public ObjectInterface {
     }
   }
 
-#ifdef CEPH_USE_FS
+#ifdef STONE_USE_FS
   explicit ReadableFileImpl(MemoryPool* pool) :  pool_(pool) {IMPL=new OSFile();}
 #endif
   explicit ReadableFileImpl(MemoryPool* pool,s3selectEngine::rgw_s3select_api* rgw) :  pool_(pool) {IMPL=new RGWimpl(rgw);}
@@ -710,7 +710,7 @@ Status ReadableFile::DoSeek(int64_t pos) { return impl_->IMPL->Seek(pos); }
 
 int ReadableFile::file_descriptor() const { return impl_->IMPL->fd(); }
 
-} // namepace ceph
+} // namepace stone
 } // namespace io
 } // namespace arrow
 
@@ -723,7 +723,7 @@ class PageReader;
 class RandomAccessSource;
 class RowGroupMetaData;
 
-namespace ceph {
+namespace stone {
 class PARQUET_EXPORT RowGroupReader {
  public:
   // Forward declare a virtual class 'Contents' to aid dependency injection and more
@@ -849,13 +849,13 @@ PARQUET_EXPORT
 int64_t ScanFileContents(std::vector<int> columns, const int32_t column_batch_size,
                          ParquetFileReader* reader);
 
-}//namespace ceph
+}//namespace stone
 }//namespace parquet
 
 
 namespace parquet {
 
-namespace ceph {
+namespace stone {
 
 // PARQUET-978: Minimize footer reads by reading 64 KB from the end of the file
 static constexpr int64_t kDefaultFooterReadSize = 64 * 1024;
@@ -1385,7 +1385,7 @@ std::unique_ptr<ParquetFileReader> ParquetFileReader::OpenFile(
         source, ::arrow::io::MemoryMappedFile::Open(path, ::arrow::io::FileMode::READ));//GAL change that also, or to remove?
   } else {
     PARQUET_ASSIGN_OR_THROW(source,
-                            ::arrow::io::ceph::ReadableFile::Open(path, rgw, props.memory_pool()));
+                            ::arrow::io::stone::ReadableFile::Open(path, rgw, props.memory_pool()));
   }
 
   return Open(std::move(source), props, std::move(metadata));
@@ -1491,7 +1491,7 @@ int64_t ScanFileContents(std::vector<int> columns, const int32_t column_batch_si
 }
 #endif
 
-} //namespace ceph
+} //namespace stone
 } //namespace parquet 
 
 /******************************************/
@@ -1504,10 +1504,10 @@ private:
 
   int64_t m_rownum;
   parquet::Type::type m_type;
-  std::shared_ptr<parquet::ceph::RowGroupReader> m_row_group_reader;
+  std::shared_ptr<parquet::stone::RowGroupReader> m_row_group_reader;
   int m_row_grouop_id;
   uint16_t m_col_id;
-  parquet::ceph::ParquetFileReader* m_parquet_reader;
+  parquet::stone::ParquetFileReader* m_parquet_reader;
   std::shared_ptr<parquet::ColumnReader> m_ColumnReader;
   bool m_end_of_stream;
   bool m_read_last_value;
@@ -1545,7 +1545,7 @@ public:
   parquet_value_t m_last_value;
 
   public:
-  column_reader_wrap(std::unique_ptr<parquet::ceph::ParquetFileReader> & parquet_reader,uint16_t col_id);
+  column_reader_wrap(std::unique_ptr<parquet::stone::ParquetFileReader> & parquet_reader,uint16_t col_id);
 
   parquet::Type::type get_type();
 
@@ -1581,7 +1581,7 @@ private:
   schema_t m_schm;
   int m_num_row_groups;
   std::shared_ptr<parquet::FileMetaData> m_file_metadata;
-  std::unique_ptr<parquet::ceph::ParquetFileReader> m_parquet_reader;
+  std::unique_ptr<parquet::stone::ParquetFileReader> m_parquet_reader;
   std::vector<column_reader_wrap*> m_column_readers;
   s3selectEngine::rgw_s3select_api* m_rgw_s3select_api;
 
@@ -1610,7 +1610,7 @@ private:
 
   int load_meta_data()
   {
-    m_parquet_reader = parquet::ceph::ParquetFileReader::OpenFile(m_parquet_file_name,m_rgw_s3select_api,false);
+    m_parquet_reader = parquet::stone::ParquetFileReader::OpenFile(m_parquet_file_name,m_rgw_s3select_api,false);
     m_file_metadata = m_parquet_reader->metadata();
     m_num_of_columms = m_parquet_reader->metadata()->num_columns();
     m_num_row_groups = m_file_metadata->num_row_groups();
@@ -1722,7 +1722,7 @@ private:
 /******************************************/
 
 
-  column_reader_wrap::column_reader_wrap(std::unique_ptr<parquet::ceph::ParquetFileReader> & parquet_reader,uint16_t col_id):
+  column_reader_wrap::column_reader_wrap(std::unique_ptr<parquet::stone::ParquetFileReader> & parquet_reader,uint16_t col_id):
   m_rownum(-1),
   m_type(parquet::Type::type::UNDEFINED),
   m_row_grouop_id(0),

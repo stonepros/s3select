@@ -1,5 +1,5 @@
 ===============
- Ceph s3 select 
+ Stone s3 select
 ===============
 
 .. contents::

@@ -18,6 +18,6 @@ RUN apt-get install -y -V libarrow-dev
 RUN apt-get install -y -V libparquet-dev
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libboost-all-dev  libgtest-dev
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends git cmake g++ make
-RUN git clone -b parquet_local_fs_first_phase https://github.com/ceph/s3select
+RUN git clone -b parquet_local_fs_first_phase https://github.com/stonepros/s3select
 RUN cd /s3select/ && cmake . && make -j4
 
